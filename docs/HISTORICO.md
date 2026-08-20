@@ -5,6 +5,7 @@ verdade continua sendo o histórico do Git.
 
 ## Entrega atual
 
+- adiciona uma tela de recepção e tradução visível entre português e inglês;
 - adiciona `docs/README.en.md` como tradução em inglês;
 - adiciona `docs/LICENSE.md` como cópia documental da licença MIT;
 - adiciona a aba `Leitura` com prévia HTML em tempo real do `.tex`;

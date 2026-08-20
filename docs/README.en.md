@@ -15,7 +15,8 @@ python3 __init__.py
 
 Open `http://127.0.0.1:8766`. The portal displays local Markdown files and a
 **GitHub Documents** section loaded through the GitHub API. It also provides a
-live HTML reading preview for LaTeX files in the article editor.
+welcome screen with Portuguese/English translation and a live HTML reading
+preview for LaTeX files in the article editor.
 
 ## Create and edit a publication
 

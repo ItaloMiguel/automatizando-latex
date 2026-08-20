@@ -243,6 +243,10 @@ class CreateArticleTests(unittest.TestCase):
             self.assertIn("Ateliê ABNT", DOCS_HTML)
 
     def test_latex_editor_contains_live_html_and_pdf_previews(self):
+        self.assertIn("welcome", HTML)
+        self.assertIn("Começar edição", HTML)
+        self.assertIn("Your article, side by side.", HTML)
+        self.assertIn("openEditor", HTML)
         self.assertIn("Leitura", HTML)
         self.assertIn("PDF", HTML)
         self.assertIn("renderLatex", HTML)

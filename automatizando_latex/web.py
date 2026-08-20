@@ -62,24 +62,41 @@ HTML = r"""<!doctype html>
     #latex-preview p { margin: 0 0 18px; }
     #latex-preview .preview-meta { color: #728087; font: 12px ui-monospace, monospace; }
     #latex-preview code { padding: 2px 5px; color: #9a4e25; background: #f7f3ed; font: .86em ui-monospace, monospace; }
+    .welcome { display: grid; place-items: center; min-height: calc(100vh - 66px); padding: 48px 24px; background: radial-gradient(circle at 80% 20%, #e5eee8 0, transparent 34%), var(--paper); }
+    .welcome-card { max-width: 620px; padding: 52px; border: 1px solid var(--line); background: #fff; box-shadow: 12px 12px 0 #dfe7e1; }
+    .welcome-card .kicker { margin: 0 0 12px; color: var(--orange); font: 12px ui-monospace, monospace; letter-spacing: .12em; text-transform: uppercase; }
+    .welcome-card h2 { margin: 0 0 18px; color: var(--ink); font-size: clamp(34px, 6vw, 58px); font-weight: normal; line-height: 1.05; }
+    .welcome-card p { max-width: 490px; color: var(--muted); font-size: 17px; }
+    .welcome-actions { display: flex; gap: 10px; align-items: center; margin-top: 28px; }
+    .language { border-color: #66808b; color: #dce8e6; background: transparent; }
+    .language option { color: var(--ink); background: #fff; }
+    .hidden { display: none !important; }
     .empty { display: grid; place-items: center; height: 100%; padding: 40px; text-align: center; color: #617177; font-size: 18px; }
     @media (max-width: 800px) { main { display: block; } .workspace { min-height: 65vh; border-right: 0; } #editor { min-height: 420px; } .preview { min-height: 70vh; } }
   </style>
 </head>
 <body>
-  <header><h1>Ateliê ABNT</h1><p id="project">carregando projeto...</p></header>
-  <main>
+  <header><h1 data-i18n="brand">Ateliê ABNT</h1><div><select id="language" class="language" aria-label="Idioma"><option value="pt">Português</option><option value="en">English</option></select><p id="project">carregando projeto...</p></div></header>
+  <section id="welcome" class="welcome" aria-labelledby="welcome-title">
+    <div class="welcome-card">
+      <p class="kicker" data-i18n="kicker">Escrita acadêmica</p>
+      <h2 id="welcome-title" data-i18n="welcomeTitle">Seu artigo, lado a lado.</h2>
+      <p data-i18n="welcomeText">Edite o código LaTeX e acompanhe uma leitura formatada em tempo real. A compilação PDF fica disponível quando o TeX estiver instalado.</p>
+      <div class="welcome-actions"><button id="start-editor" class="primary" data-i18n="start">Começar edição</button><span class="preview-meta" data-i18n="welcomeHint">Arquivos salvos automaticamente</span></div>
+    </div>
+  </section>
+  <main id="editor-app" class="hidden">
     <section class="workspace" aria-label="Editor do projeto">
       <div class="toolbar">
         <select id="file" aria-label="Arquivo para editar"></select>
-        <button id="save">Salvar</button>
-        <button id="compile" class="primary">Compilar PDF</button>
+        <button id="save" data-i18n="save">Salvar</button>
+        <button id="compile" class="primary" data-i18n="compile">Compilar PDF</button>
       </div>
       <textarea id="editor" spellcheck="false" aria-label="Editor de texto"></textarea>
       <div id="status" class="status">Pronto.</div>
     </section>
     <section class="preview" aria-label="Visualização do PDF">
-      <div class="preview-head"><span>Visualização</span><div class="preview-tabs"><button id="html-tab" class="active">Leitura</button><button id="pdf-tab">PDF</button><span id="build-state">ao vivo</span></div></div>
+      <div class="preview-head"><span data-i18n="preview">Visualização</span><div class="preview-tabs"><button id="html-tab" class="active" data-i18n="reading">Leitura</button><button id="pdf-tab">PDF</button><span id="build-state">ao vivo</span></div></div>
       <div id="html-pane" class="preview-pane"><article id="latex-preview"></article></div>
       <div id="pdf-pane" class="preview-pane" hidden><iframe id="pdf" title="Visualização do PDF"></iframe></div>
     </section>
@@ -93,7 +110,27 @@ HTML = r"""<!doctype html>
     const htmlPane = document.querySelector('#html-pane');
     const pdfPane = document.querySelector('#pdf-pane');
     const buildState = document.querySelector('#build-state');
+    const language = document.querySelector('#language');
+    const welcome = document.querySelector('#welcome');
+    const editorApp = document.querySelector('#editor-app');
     let timer;
+
+    const translations = {
+      pt: { brand: 'Ateliê ABNT', kicker: 'Escrita acadêmica', welcomeTitle: 'Seu artigo, lado a lado.', welcomeText: 'Edite o código LaTeX e acompanhe uma leitura formatada em tempo real. A compilação PDF fica disponível quando o TeX estiver instalado.', start: 'Começar edição', welcomeHint: 'Arquivos salvos automaticamente', save: 'Salvar', compile: 'Compilar PDF', preview: 'Visualização', reading: 'Leitura' },
+      en: { brand: 'ABNT Atelier', kicker: 'Academic writing', welcomeTitle: 'Your article, side by side.', welcomeText: 'Edit LaTeX code and follow a formatted reading preview in real time. PDF compilation is available when TeX is installed.', start: 'Start editing', welcomeHint: 'Files are saved automatically', save: 'Save', compile: 'Compile PDF', preview: 'Preview', reading: 'Reading' }
+    };
+
+    // Keep the welcome screen separate from the editor so the first visit is calm and readable.
+    function setLanguage(code) {
+      document.documentElement.lang = code === 'en' ? 'en' : 'pt-BR';
+      document.querySelectorAll('[data-i18n]').forEach(element => { element.textContent = translations[code][element.dataset.i18n]; });
+      localStorage.setItem('ateliê-language', code);
+    }
+
+    function openEditor() {
+      welcome.classList.add('hidden'); editorApp.classList.remove('hidden');
+      editor.focus();
+    }
 
     function message(text, error = false) {
       status.textContent = text;
@@ -120,6 +157,7 @@ HTML = r"""<!doctype html>
     }
 
     function renderLatex(source) {
+      // This lightweight renderer favors immediate feedback; the real PDF remains optional.
       let output = escapeHtml(source);
       output = output.replace(/%.*$/gm, '');
       output = output.replace(/\\(chapter|section|subsection|subsubsection)\{([^{}]*)\}/g, (_, level, title) => `<h${level === 'chapter' ? 1 : level === 'section' ? 2 : 3}>${title}</h${level === 'chapter' ? 1 : level === 'section' ? 2 : 3}>`);
@@ -163,6 +201,9 @@ HTML = r"""<!doctype html>
     }
 
     fileSelect.addEventListener('change', loadFile);
+    document.querySelector('#start-editor').addEventListener('click', openEditor);
+    language.addEventListener('change', () => setLanguage(language.value));
+    setLanguage(localStorage.getItem('ateliê-language') || 'pt');
     document.querySelector('#save').addEventListener('click', () => saveFile());
     document.querySelector('#compile').addEventListener('click', compile);
     document.querySelector('#html-tab').addEventListener('click', () => showPreview('html'));

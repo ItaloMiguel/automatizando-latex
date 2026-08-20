@@ -205,6 +205,8 @@ python -m automatizando_latex.cli serve projetos/meu-artigo
 
 O navegador abrirá em `http://127.0.0.1:8765`. A interface oferece:
 
+- tela de recepção antes do editor;
+- tradução visível entre Português e English;
 - edição de `main.tex`, `configuracao.tex` e `referencias.bib`;
 - salvamento automático após uma pausa na digitação;
 - botão para salvar manualmente;
