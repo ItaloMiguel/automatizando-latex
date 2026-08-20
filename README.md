@@ -65,6 +65,49 @@ Para consultar a ajuda, execute o comando separadamente:
 python -m automatizando_latex.cli init -h
 ```
 
+## Comandos de edição
+
+Valide um projeto antes de compilá-lo:
+
+```bash
+python -m automatizando_latex.cli check projetos/meu-artigo
+```
+
+Insira uma seção no `main.tex`. Por padrão, ela é adicionada antes de
+`\\postextual`:
+
+```bash
+python -m automatizando_latex.cli section projetos/meu-artigo "Metodologia" \
+	--level section \
+	--content "Descreva aqui os métodos utilizados."
+```
+
+Adicione uma tabela. As colunas e linhas usam vírgulas como separador; repita
+`--row` para incluir mais linhas:
+
+```bash
+python -m automatizando_latex.cli table projetos/meu-artigo "Resultados" \
+	--columns "Indicador,Valor" \
+	--row "Amostra,120" \
+	--row "Respostas,98"
+```
+
+Adicione uma referência de artigo ao `referencias.bib`:
+
+```bash
+python -m automatizando_latex.cli reference projetos/meu-artigo silva2026 \
+	--author "Silva, Ana" \
+	--title "Um estudo sobre o tema" \
+	--year 2026 \
+	--journal "Revista Científica"
+```
+
+Depois cite a chave no texto com `\\cite{silva2026}` e compile:
+
+```bash
+python -m automatizando_latex.cli build projetos/meu-artigo
+```
+
 ## Executar na AWS
 
 Como o projeto é uma CLI, a forma mais simples de testá-lo na AWS é pelo
@@ -123,5 +166,4 @@ python -m pytest
 
 ## Próximos passos
 
-- criar comandos para inserir seções, tabelas e referências;
 - adicionar uma interface de edição e visualização em tempo real.

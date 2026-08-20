@@ -9,7 +9,11 @@ from automatizando_latex.cli import (
     _slug,
     build_parser,
     build_project,
+    add_reference,
+    add_table,
+    check_project,
     create_article,
+    insert_section,
 )
 
 
@@ -100,3 +104,48 @@ class CreateArticleTests(unittest.TestCase):
                 ],
             )
             self.assertEqual(len(commands), 4)
+
+    def test_insert_section_adds_content_before_posttextual(self):
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory) / "projeto"
+            create_article(project, "Título", "Autor")
+
+            insert_section(project, "Método", "Descreva o método.", "section")
+            document = (project / "main.tex").read_text(encoding="utf-8")
+
+            self.assertIn("\\section{Método}\n\nDescreva o método.", document)
+            self.assertLess(document.index("\\section{Método}"), document.index("\\postextual"))
+
+    def test_add_table_generates_latex_table(self):
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory) / "projeto"
+            create_article(project, "Título", "Autor")
+
+            add_table(project, "Resultados", ["Nome", "Valor"], [["A", "10"]])
+            document = (project / "main.tex").read_text(encoding="utf-8")
+
+            self.assertIn("\\caption{Resultados}", document)
+            self.assertIn("Nome & Valor", document)
+            self.assertIn("A & 10", document)
+
+    def test_add_reference_appends_bibtex_entry_and_rejects_duplicate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory) / "projeto"
+            create_article(project, "Título", "Autor")
+
+            add_reference(project, "silva2026", "Silva, Ana", "Pesquisa", "2026", "Revista")
+            bibliography = (project / "referencias.bib").read_text(encoding="utf-8")
+
+            self.assertIn("@article{silva2026,", bibliography)
+            with self.assertRaises(ValueError):
+                add_reference(project, "silva2026", "Silva, Ana", "Outra", "2026", "Revista")
+
+    def test_check_project_returns_required_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory) / "projeto"
+            create_article(project, "Título", "Autor")
+
+            self.assertEqual(
+                {path.name for path in check_project(project)},
+                {"main.tex", "configuracao.tex", "referencias.bib"},
+            )

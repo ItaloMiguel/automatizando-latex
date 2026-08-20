@@ -118,6 +118,8 @@ BIB_TEMPLATE = r"""@article{exemplo2026,
 }
 """
 
+REQUIRED_PROJECT_FILES = ("main.tex", "configuracao.tex", "referencias.bib")
+
 
 def _slug(value: str) -> str:
     """Converte um nome de projeto em um diretório simples e previsível."""
@@ -142,6 +144,107 @@ def _latex_escape(value: str) -> str:
         "^": r"\textasciicircum{}",
     }
     return "".join(replacements.get(character, character) for character in value)
+
+
+def _bib_escape(value: str) -> str:
+    """Escapa valores básicos de uma entrada BibTeX."""
+    return value.replace("{", "\\{").replace("}", "\\}").replace("\n", " ").strip()
+
+
+def _project_file(project_dir: Path, filename: str) -> Path:
+    if not project_dir.is_dir():
+        raise FileNotFoundError(f"diretório do projeto não encontrado: {project_dir}")
+    path = project_dir / filename
+    if not path.is_file():
+        raise FileNotFoundError(f"arquivo obrigatório não encontrado: {path}")
+    return path
+
+
+def insert_section(
+    project_dir: Path,
+    title: str,
+    content: str = "Escreva o conteúdo desta seção.\n",
+    level: str = "chapter",
+) -> Path:
+    """Insere uma seção no texto antes da bibliografia."""
+    if level not in {"part", "chapter", "section", "subsection", "subsubsection"}:
+        raise ValueError("nível inválido; use part, chapter, section, subsection ou subsubsection")
+    path = _project_file(project_dir, "main.tex")
+    document = path.read_text(encoding="utf-8")
+    marker = "\\postextual"
+    if marker not in document:
+        raise ValueError(f"marcador {marker} não encontrado em {path}")
+    section = f"\\{level}{{{_latex_escape(title)}}}\n\n{content.rstrip()}\n\n"
+    path.write_text(document.replace(marker, section + marker, 1), encoding="utf-8")
+    return path
+
+
+def add_table(
+    project_dir: Path,
+    caption: str,
+    columns: list[str],
+    rows: list[list[str]],
+) -> Path:
+    """Adiciona uma tabela simples antes da bibliografia."""
+    if not columns:
+        raise ValueError("a tabela precisa de pelo menos uma coluna")
+    if any(len(row) != len(columns) for row in rows):
+        raise ValueError("cada linha precisa ter a mesma quantidade de valores das colunas")
+    path = _project_file(project_dir, "main.tex")
+    document = path.read_text(encoding="utf-8")
+    alignment = " ".join("l" for _ in columns)
+    lines = [
+        "\\begin{table}[htbp]",
+        "\\centering",
+        f"\\caption{{{_latex_escape(caption)}}}",
+        f"\\begin{{tabular}}{{{alignment}}}",
+        "\\toprule",
+        " & ".join(_latex_escape(column) for column in columns) + r" \\",
+        "\\midrule",
+    ]
+    lines.extend(
+        " & ".join(_latex_escape(value) for value in row) + r" \\"
+        for row in rows
+    )
+    lines.extend(["\\bottomrule", "\\end{tabular}", "\\end{table}", ""])
+    marker = "\\postextual"
+    if marker not in document:
+        raise ValueError(f"marcador {marker} não encontrado em {path}")
+    path.write_text(document.replace(marker, "\n".join(lines) + marker, 1), encoding="utf-8")
+    return path
+
+
+def add_reference(
+    project_dir: Path,
+    key: str,
+    author: str,
+    title: str,
+    year: str,
+    journal: str,
+) -> Path:
+    """Adiciona uma referência de artigo ao banco BibTeX."""
+    if not re.fullmatch(r"[A-Za-z][A-Za-z0-9:_-]*", key):
+        raise ValueError("a chave deve começar com letra e conter apenas letras, números, :, _ ou -")
+    path = _project_file(project_dir, "referencias.bib")
+    document = path.read_text(encoding="utf-8")
+    if re.search(rf"^\s*@\w+\s*\{{\s*{re.escape(key)}\s*,", document, re.MULTILINE):
+        raise ValueError(f"a referência já existe: {key}")
+    entry = (
+        f"@article{{{key},\n"
+        f"  author  = {{{_bib_escape(author)}}},\n"
+        f"  title   = {{{_bib_escape(title)}}},\n"
+        f"  journal = {{{_bib_escape(journal)}}},\n"
+        f"  year    = {{{_bib_escape(year)}}}\n"
+        "}\n"
+    )
+    separator = "\n" if document and not document.endswith("\n\n") else ""
+    path.write_text(document + separator + entry, encoding="utf-8")
+    return path
+
+
+def check_project(project_dir: Path) -> list[Path]:
+    """Valida e retorna os arquivos essenciais de um projeto."""
+    return [_project_file(project_dir, filename) for filename in REQUIRED_PROJECT_FILES]
 
 
 def create_article(
@@ -254,6 +357,40 @@ def build_parser() -> argparse.ArgumentParser:
     build_parser.add_argument(
         "--tex-file", default="main.tex", help="arquivo principal (padrão: main.tex)"
     )
+    section_parser = subparsers.add_parser(
+        "section", help="insere uma seção no arquivo principal"
+    )
+    section_parser.add_argument("project", type=Path, help="diretório do projeto")
+    section_parser.add_argument("title", help="título da seção")
+    section_parser.add_argument(
+        "--level", choices=("part", "chapter", "section", "subsection", "subsubsection"),
+        default="section",
+    )
+    section_parser.add_argument(
+        "--content", default="Escreva o conteúdo desta seção.", help="conteúdo inicial"
+    )
+    table_parser = subparsers.add_parser("table", help="insere uma tabela no arquivo principal")
+    table_parser.add_argument("project", type=Path, help="diretório do projeto")
+    table_parser.add_argument("caption", help="legenda da tabela")
+    table_parser.add_argument(
+        "--columns", required=True, help="colunas separadas por vírgula"
+    )
+    table_parser.add_argument(
+        "--row", action="append", default=[], help="linha separada por vírgula; repita para novas linhas"
+    )
+    reference_parser = subparsers.add_parser(
+        "reference", help="adiciona um artigo ao arquivo BibTeX"
+    )
+    reference_parser.add_argument("project", type=Path, help="diretório do projeto")
+    reference_parser.add_argument("key", help="chave usada em \\cite{...}")
+    reference_parser.add_argument("--author", required=True)
+    reference_parser.add_argument("--title", required=True)
+    reference_parser.add_argument("--year", required=True)
+    reference_parser.add_argument("--journal", required=True)
+    check_parser = subparsers.add_parser(
+        "check", help="verifica os arquivos essenciais de um projeto"
+    )
+    check_parser.add_argument("project", type=Path, help="diretório do projeto")
     return parser
 
 
@@ -283,6 +420,45 @@ def main() -> int:
         print(f"Projeto compilado em {args.project}")
         for command in commands:
             print(f"  - {command}")
+    elif args.command == "section":
+        try:
+            path = insert_section(args.project, args.title, args.content, args.level)
+        except (FileNotFoundError, ValueError) as error:
+            print(f"Erro: {error}")
+            return 1
+        print(f"Seção adicionada em {path}")
+    elif args.command == "table":
+        try:
+            columns = [column.strip() for column in args.columns.split(",")]
+            rows = [[value.strip() for value in row.split(",")] for row in args.row]
+            path = add_table(args.project, args.caption, columns, rows)
+        except (FileNotFoundError, ValueError) as error:
+            print(f"Erro: {error}")
+            return 1
+        print(f"Tabela adicionada em {path}")
+    elif args.command == "reference":
+        try:
+            path = add_reference(
+                args.project,
+                args.key,
+                args.author,
+                args.title,
+                args.year,
+                args.journal,
+            )
+        except (FileNotFoundError, ValueError) as error:
+            print(f"Erro: {error}")
+            return 1
+        print(f"Referência adicionada em {path}")
+    elif args.command == "check":
+        try:
+            files = check_project(args.project)
+        except FileNotFoundError as error:
+            print(f"Erro: {error}")
+            return 1
+        print(f"Projeto válido: {args.project}")
+        for path in files:
+            print(f"  - {path.name}")
     return 0
 
 
