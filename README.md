@@ -23,8 +23,16 @@ Crie um artigo:
 
 ```powershell
 python -m automatizando_latex.cli init meu-artigo --title "Meu primeiro artigo" --author "Seu Nome"
-cd meu-artigo
+cd projetos/meu-artigo
 pdflatex main.tex
+```
+
+Por padrão, todo projeto novo é criado em `projetos/`. Essa pasta está no
+`.gitignore`, portanto os artigos e PDFs gerados nela não serão enviados ao
+GitHub. Para usar outra pasta, informe `--output-dir`:
+
+```bash
+python -m automatizando_latex.cli init meu-artigo --output-dir rascunhos
 ```
 
 O tipo padrão é `artigo`. Também é possível criar `tcc`, `monografia`,
@@ -63,14 +71,14 @@ python -m pip install -e .
 python -m automatizando_latex.cli init abnt --type artigo --title "Paul_Dirac" --author "ItaloMiguel"
 ```
 
-Isso cria a pasta `abnt` no diretório atual. Para gerar o PDF, a máquina também
+Isso cria a pasta `projetos/abnt`. Para gerar o PDF, a máquina também
 precisa ter TeX Live e a classe `abntex2` instalados. Em uma instância Linux
 EC2, por exemplo, instale-os antes da compilação:
 
 ```bash
 sudo apt update
 sudo apt install -y texlive-latex-base texlive-lang-portuguese texlive-publishers
-cd abnt
+cd projetos/abnt
 pdflatex main.tex
 ```
 

@@ -1,0 +1,49 @@
+\documentclass[12pt,oneside,a4paper]{abntex2}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{indentfirst}
+\usepackage{csquotes}
+\usepackage{graphicx}
+\usepackage{booktabs}
+
+\input{configuracao}
+
+\begin{document}
+
+\imprimircapa
+\imprimirfolhaderosto
+
+\begin{resumo}
+Escreva aqui o resumo do artigo. Substitua este texto antes da submissão.
+
+\vspace{\onelineskip}
+\noindent
+\textbf{Palavras-chave}: palavra-chave 1. Palavra-chave 2. Palavra-chave 3.
+\end{resumo}
+
+\pdfbookmark[0]{\contentsname}{toc}
+\tableofcontents*
+\clearpage
+
+\textual
+\chapter{Introdução}
+
+Apresente o tema, o problema de pesquisa e os objetivos do artigo.
+
+\chapter{Desenvolvimento}
+
+Organize a fundamentação teórica e a análise em seções. Para citar uma obra,
+use o arquivo de referências, por exemplo: \cite{exemplo2026}.
+
+\chapter{Conclusão}
+
+Retome os resultados e indique possíveis trabalhos futuros.
+
+\postextual
+\bibliography{referencias}
+
+\end{document}
