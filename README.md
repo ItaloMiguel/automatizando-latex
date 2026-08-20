@@ -46,11 +46,28 @@ python -m automatizando_latex.cli build .
 ```
 
 Os comandos disponíveis são `init`, `serve`, `build`, `check`, `section`,
-`table` e `reference`. Veja todos os argumentos com:
+`table`, `reference` e `docs`. Veja todos os argumentos com:
 
 ```bash
 python -m automatizando_latex.cli --help
 ```
+
+## Portal visual da documentação
+
+Para navegar pela documentação Markdown do projeto em uma interface visual:
+
+```bash
+python -m automatizando_latex.cli docs .
+```
+
+O portal abre em `http://127.0.0.1:8766` e encontra automaticamente arquivos
+`.md` na raiz informada, incluindo `README.md`, `CONTRIBUTING.md` e a pasta
+`docs/`. Ele oferece navegação lateral, busca por nome, renderização de títulos,
+listas, tabelas, links, citações e blocos de código, além de layout responsivo.
+
+O comando `serve` continua dedicado ao editor de um artigo individual. Essa
+separação mantém a documentação do projeto independente do conteúdo LaTeX de
+cada artigo.
 
 O comando `build` executa a sequência completa:
 

@@ -401,6 +401,15 @@ def build_parser() -> argparse.ArgumentParser:
     serve_parser.add_argument(
         "--no-browser", action="store_true", help="não abrir o navegador automaticamente"
     )
+    docs_parser = subparsers.add_parser(
+        "docs", help="abre a documentação Markdown em um portal local"
+    )
+    docs_parser.add_argument("root", type=Path, nargs="?", default=Path.cwd())
+    docs_parser.add_argument("--host", default="127.0.0.1")
+    docs_parser.add_argument("--port", type=int, default=8766)
+    docs_parser.add_argument(
+        "--no-browser", action="store_true", help="não abrir o navegador automaticamente"
+    )
     return parser
 
 
@@ -474,6 +483,14 @@ def main() -> int:
             from .web import serve_project
 
             serve_project(args.project, args.host, args.port, not args.no_browser)
+        except (FileNotFoundError, OSError, ValueError) as error:
+            print(f"Erro: {error}")
+            return 1
+    elif args.command == "docs":
+        try:
+            from .web import serve_docs
+
+            serve_docs(args.root, args.host, args.port, not args.no_browser)
         except (FileNotFoundError, OSError, ValueError) as error:
             print(f"Erro: {error}")
             return 1

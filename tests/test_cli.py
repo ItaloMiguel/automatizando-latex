@@ -20,7 +20,15 @@ from automatizando_latex.cli import (
     create_article,
     insert_section,
 )
-from automatizando_latex.web import EDITOR_FILES, ProjectHandler, HTML
+from automatizando_latex.web import (
+    DOCS_HTML,
+    EDITOR_FILES,
+    ProjectHandler,
+    HTML,
+    DocsHandler,
+    discover_markdown,
+    markdown_to_html,
+)
 
 
 class CreateArticleTests(unittest.TestCase):
@@ -212,3 +220,44 @@ class CreateArticleTests(unittest.TestCase):
             finally:
                 server.shutdown()
                 server.server_close()
+
+    def test_markdown_portal_discovers_and_renders_project_documents(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "README.md").write_text(
+                "# Projeto\n\nUma **descrição**.\n\n```bash\necho ok\n```\n",
+                encoding="utf-8",
+            )
+            (root / "docs").mkdir()
+            (root / "docs" / "guia.md").write_text("# Guia\n\n- Passo um\n", encoding="utf-8")
+            (root / ".hidden.md").write_text("# Oculto", encoding="utf-8")
+
+            documents = discover_markdown(root)
+            rendered = markdown_to_html((root / "README.md").read_text(encoding="utf-8"))
+
+            self.assertEqual([document["path"] for document in documents], ["README.md", "docs/guia.md"])
+            self.assertIn("<strong>descrição</strong>", rendered)
+            self.assertIn("<pre><code>echo ok", rendered)
+            self.assertIn("Ateliê ABNT", DOCS_HTML)
+
+    def test_docs_interface_reads_document_and_blocks_path_escape(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "README.md").write_text("# Projeto", encoding="utf-8")
+            outside = root.parent / "segredo.md"
+            outside.write_text("segredo", encoding="utf-8")
+            handler = type("TestDocsHandler", (DocsHandler,), {"docs_root": root})
+            server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                with urlopen(f"http://127.0.0.1:{server.server_port}/api/docs") as response:
+                    self.assertEqual(json.loads(response.read())["documents"][0]["path"], "README.md")
+                with self.assertRaises(HTTPError) as error:
+                    urlopen(f"http://127.0.0.1:{server.server_port}/api/doc?path=../segredo.md")
+                self.assertEqual(error.exception.code, 400)
+                error.exception.close()
+            finally:
+                server.shutdown()
+                server.server_close()
+                outside.unlink()

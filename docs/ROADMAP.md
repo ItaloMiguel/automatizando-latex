@@ -29,3 +29,10 @@ Priorize funcionalidades que reduzam edição manual, tenham baixo risco de
 perder conteúdo e possam ser cobertas por testes automatizados. Toda nova
 operação de escrita deve recusar sobrescritas silenciosas e gerar uma mensagem
 de erro clara.
+
+## Já entregue
+
+- portal visual que descobre e renderiza arquivos Markdown com `docs`;
+- editor local com salvamento automático e visualização de PDF com `serve`;
+- comandos de edição para seções, tabelas e referências;
+- validação e compilação com BibTeX no GitHub Actions.
