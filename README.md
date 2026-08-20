@@ -24,8 +24,18 @@ Crie um artigo:
 ```powershell
 python -m automatizando_latex.cli init meu-artigo --title "Meu primeiro artigo" --author "Seu Nome"
 cd projetos/meu-artigo
-pdflatex main.tex
+python -m automatizando_latex.cli build .
 ```
+
+O comando `build` executa a sequência completa:
+
+```text
+pdflatex -> bibtex -> pdflatex -> pdflatex
+```
+
+As três passagens do LaTeX resolvem referências cruzadas, sumário e citações
+depois que o BibTeX gera a bibliografia. O PDF será criado em
+`projetos/meu-artigo/main.pdf`.
 
 Por padrão, todo projeto novo é criado em `projetos/`. Essa pasta está no
 `.gitignore`, portanto os artigos e PDFs gerados nela não serão enviados ao
@@ -77,9 +87,9 @@ EC2, por exemplo, instale-os antes da compilação:
 
 ```bash
 sudo apt update
-sudo apt install -y texlive-latex-base texlive-lang-portuguese texlive-publishers
+sudo apt install -y texlive-latex-base texlive-lang-portuguese texlive-publishers texlive-binaries
 cd projetos/abnt
-pdflatex main.tex
+python -m automatizando_latex.cli build .
 ```
 
 O CloudShell e o EC2 servem para executar a ferramenta. Para armazenar os
@@ -95,6 +105,12 @@ git add .
 git commit -m "Escreve introducao do artigo"
 ```
 
+O workflow `CI` do GitHub Actions roda automaticamente em cada `push` para
+`main`/`master` e em cada Pull Request. Ele testa Python 3.10 a 3.13 e faz um
+smoke test da CLI. A segunda job compila um artigo ABNT completo com BibTeX e
+publica o PDF como artefato da execução. Consulte [CONTRIBUTING.md](CONTRIBUTING.md)
+para o padrão de commits e o checklist de Pull Requests.
+
 O PDF e os arquivos auxiliares de compilação ficam fora do versionamento. O
 texto-fonte continua disponível para comparar qualquer mudança ao longo do
 tempo.
@@ -107,6 +123,5 @@ python -m pytest
 
 ## Próximos passos
 
-- incluir uma rotina de compilação completa com BibTeX;
 - criar comandos para inserir seções, tabelas e referências;
 - adicionar uma interface de edição e visualização em tempo real.
