@@ -106,6 +106,16 @@ python -m automatizando_latex.cli docs . \
 ```
 
 A API usa a árvore pública do GitHub e o conteúdo bruto dos arquivos Markdown.
+Para economizar espaço local, carregue somente os documentos do GitHub:
+
+```bash
+python -m automatizando_latex.cli docs . \
+	--github-repo italo/automatizando-latex \
+	--github-only
+```
+
+Nesse modo, nenhum `.md` local é indexado. É necessário ter conexão com a
+internet; sem ela, o portal exibirá que não encontrou documentação.
 Para repositórios privados, configure um token com acesso de leitura antes de
 iniciar o servidor:
 

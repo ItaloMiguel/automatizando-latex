@@ -304,3 +304,17 @@ class CreateArticleTests(unittest.TestCase):
         ):
             self.assertFalse(_open_browser("http://127.0.0.1:8766"))
         browser_open.assert_not_called()
+
+    @mock_patch("automatizando_latex.web.Path.read_text")
+    def test_wsl_detection_also_handles_missing_wsl_interop(self, read_text):
+        read_text.return_value = "Linux version microsoft-standard-WSL2"
+        with patch.dict(
+            "os.environ",
+            {"WSL_INTEROP": "", "WSL_DISTRO_NAME": "", "DISPLAY": "", "WAYLAND_DISPLAY": "", "BROWSER": ""},
+            clear=False,
+        ):
+            self.assertFalse(_open_browser("http://127.0.0.1:8766"))
+
+    def test_github_only_server_skips_local_documents(self):
+        handler = type("GithubOnlyHandler", (DocsHandler,), {"docs_root": Path.cwd(), "github_only": True})
+        self.assertTrue(handler.github_only)

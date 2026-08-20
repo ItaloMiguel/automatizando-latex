@@ -25,8 +25,14 @@ GITHUB_API = "https://api.github.com"
 
 
 def _open_browser(url: str) -> bool:
-  """Abre o navegador quando há GUI; no WSL headless, apenas mantém a URL impressa."""
-  is_wsl_without_gui = "WSL_INTEROP" in os.environ and not any(
+  """Abre o navegador somente quando há GUI disponível."""
+  is_wsl = bool(os.environ.get("WSL_INTEROP") or os.environ.get("WSL_DISTRO_NAME"))
+  if not is_wsl:
+    try:
+      is_wsl = "microsoft" in Path("/proc/version").read_text().lower()
+    except OSError:
+      pass
+  is_wsl_without_gui = is_wsl and not any(
     os.environ.get(variable) for variable in ("DISPLAY", "WAYLAND_DISPLAY", "BROWSER")
   )
   if is_wsl_without_gui:
@@ -330,7 +336,7 @@ DOCS_HTML = r"""<!doctype html>
     catch (error) { article.innerHTML = `<p class="empty">${error.message}</p>`; }
   }
   search.addEventListener('input', () => { drawNav(search.value); drawGithubNav(search.value); });
-  Promise.all([request('/api/docs'), request('/api/github-docs')]).then(([local, remote]) => { documents = local.documents; githubDocuments = remote.documents; drawNav(); drawGithubNav(); const initial = decodeURIComponent(location.hash.slice(1)); if (initial.startsWith('github-')) loadGithubDoc(initial.slice(7)); else loadDoc(documents.some(doc => doc.path === initial) ? initial : documents[0].path); }).catch(error => { article.innerHTML = `<p class="empty">${error.message}</p>`; });
+  Promise.all([request('/api/docs'), request('/api/github-docs')]).then(([local, remote]) => { documents = local.documents; githubDocuments = remote.documents; drawNav(); drawGithubNav(); const initial = decodeURIComponent(location.hash.slice(1)); if (initial.startsWith('github-')) loadGithubDoc(initial.slice(7)); else if (documents.length) loadDoc(documents.some(doc => doc.path === initial) ? initial : documents[0].path); else if (githubDocuments.length) loadGithubDoc(githubDocuments[0].path); else article.innerHTML = '<p class="empty">Nenhuma documentação encontrada.</p>'; }).catch(error => { article.innerHTML = `<p class="empty">${error.message}</p>`; });
   </script>
 </body>
 </html>"""
@@ -566,6 +572,7 @@ class DocsHandler(BaseHTTPRequestHandler):
     docs_root: Path
     github_repo: str | None = None
     github_branch: str = "main"
+    github_only: bool = False
 
     def _send_json(self, payload: dict, status: HTTPStatus = HTTPStatus.OK) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
@@ -598,7 +605,8 @@ class DocsHandler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(body)
             elif parsed.path == "/api/docs":
-                self._send_json({"documents": discover_markdown(self.docs_root)})
+              documents = [] if self.github_only else discover_markdown(self.docs_root)
+              self._send_json({"documents": documents})
             elif parsed.path == "/api/doc":
                 relative_path = parse_qs(parsed.query).get("path", [""])[0]
                 path = self._safe_doc(relative_path)
@@ -639,10 +647,11 @@ def serve_project(project_dir: Path, host: str = "127.0.0.1", port: int = 8765, 
         server.server_close()
 
 
-def serve_docs(root: Path, host: str = "127.0.0.1", port: int = 8766, open_browser: bool = True, github_repo: str | None = None, github_branch: str = "main") -> None:
+def serve_docs(root: Path, host: str = "127.0.0.1", port: int = 8766, open_browser: bool = True, github_repo: str | None = None, github_branch: str = "main", github_only: bool = False) -> None:
     """Inicia o portal local que exibe os Markdown da raiz informada."""
-    discover_markdown(root)
-    handler = type("BoundDocsHandler", (DocsHandler,), {"docs_root": root.resolve(), "github_repo": github_repo, "github_branch": github_branch})
+    if not github_only:
+      discover_markdown(root)
+    handler = type("BoundDocsHandler", (DocsHandler,), {"docs_root": root.resolve(), "github_repo": github_repo, "github_branch": github_branch, "github_only": github_only})
     server = ThreadingHTTPServer((host, port), handler)
     url = f"http://{host}:{server.server_port}/"
     print(f"Documentação disponível em {url}")
