@@ -49,7 +49,19 @@ HTML = r"""<!doctype html>
     .status { min-height: 40px; padding: 10px 18px; border-top: 1px solid var(--line); color: var(--muted); background: #fff; font: 12px ui-monospace, monospace; }
     .preview { display: flex; flex-direction: column; min-width: 0; background: #cfd6d7; }
     .preview-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; color: #fff; background: #314650; font: 13px ui-monospace, monospace; }
-    #pdf { flex: 1; width: 100%; min-height: 600px; border: 0; background: #fff; }
+    .preview-tabs { display: flex; gap: 6px; align-items: center; }
+    .preview-tabs button { padding: 5px 8px; border-color: #66808b; color: #dce8e6; background: transparent; }
+    .preview-tabs button.active { color: #17212b; background: #fff; }
+    .preview-pane { flex: 1; overflow: auto; min-height: 600px; background: #fff; }
+    #pdf { width: 100%; min-height: 600px; border: 0; background: #fff; }
+    #latex-preview { max-width: 780px; margin: 0 auto; padding: 52px clamp(24px, 7vw, 78px) 90px; color: #24343b; background: #fff; font: 16px/1.75 Georgia, 'Times New Roman', serif; }
+    #latex-preview h1, #latex-preview h2, #latex-preview h3 { color: #172936; font-weight: normal; line-height: 1.18; }
+    #latex-preview h1 { margin-top: 0; font-size: 36px; }
+    #latex-preview h2 { margin-top: 38px; padding-top: 10px; border-top: 1px solid #d9e1e2; font-size: 27px; }
+    #latex-preview h3 { margin-top: 28px; font-size: 21px; }
+    #latex-preview p { margin: 0 0 18px; }
+    #latex-preview .preview-meta { color: #728087; font: 12px ui-monospace, monospace; }
+    #latex-preview code { padding: 2px 5px; color: #9a4e25; background: #f7f3ed; font: .86em ui-monospace, monospace; }
     .empty { display: grid; place-items: center; height: 100%; padding: 40px; text-align: center; color: #617177; font-size: 18px; }
     @media (max-width: 800px) { main { display: block; } .workspace { min-height: 65vh; border-right: 0; } #editor { min-height: 420px; } .preview { min-height: 70vh; } }
   </style>
@@ -67,8 +79,9 @@ HTML = r"""<!doctype html>
       <div id="status" class="status">Pronto.</div>
     </section>
     <section class="preview" aria-label="Visualização do PDF">
-      <div class="preview-head"><span>Visualização</span><span id="build-state">PDF ainda não compilado</span></div>
-      <iframe id="pdf" title="Visualização do PDF"></iframe>
+      <div class="preview-head"><span>Visualização</span><div class="preview-tabs"><button id="html-tab" class="active">Leitura</button><button id="pdf-tab">PDF</button><span id="build-state">ao vivo</span></div></div>
+      <div id="html-pane" class="preview-pane"><article id="latex-preview"></article></div>
+      <div id="pdf-pane" class="preview-pane" hidden><iframe id="pdf" title="Visualização do PDF"></iframe></div>
     </section>
   </main>
   <script>
@@ -76,6 +89,9 @@ HTML = r"""<!doctype html>
     const editor = document.querySelector('#editor');
     const status = document.querySelector('#status');
     const pdf = document.querySelector('#pdf');
+    const latexPreview = document.querySelector('#latex-preview');
+    const htmlPane = document.querySelector('#html-pane');
+    const pdfPane = document.querySelector('#pdf-pane');
     const buildState = document.querySelector('#build-state');
     let timer;
 
@@ -95,7 +111,32 @@ HTML = r"""<!doctype html>
       const name = fileSelect.value;
       const data = await request(`/api/file?name=${encodeURIComponent(name)}`);
       editor.value = data.content;
+      renderLatex(data.content);
       message(`${name} carregado.`);
+    }
+
+    function escapeHtml(value) {
+      return value.replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
+    }
+
+    function renderLatex(source) {
+      let output = escapeHtml(source);
+      output = output.replace(/%.*$/gm, '');
+      output = output.replace(/\\(chapter|section|subsection|subsubsection)\{([^{}]*)\}/g, (_, level, title) => `<h${level === 'chapter' ? 1 : level === 'section' ? 2 : 3}>${title}</h${level === 'chapter' ? 1 : level === 'section' ? 2 : 3}>`);
+      output = output.replace(/\\textbf\{([^{}]*)\}/g, '<strong>$1</strong>');
+      output = output.replace(/\\emph\{([^{}]*)\}/g, '<em>$1</em>');
+      output = output.replace(/\\cite\{([^{}]*)\}/g, '<code>cite:$1</code>');
+      output = output.replace(/\\(begin|end)\{[^{}]*\}/g, '');
+      output = output.replace(/\\(documentclass|usepackage|input|imprimir\w+|pdfbookmark|tableofcontents|clearpage|textual|postextual|bibliographystyle|bibliography|vspace|noindent)\b[^\n]*/g, '');
+      output = output.split(/\n\s*\n/).map(block => block.trim()).filter(Boolean).map(block => block.startsWith('<h') ? block : `<p>${block.replace(/\n/g, '<br>')}</p>`).join('');
+      latexPreview.innerHTML = output || '<p class="preview-meta">Comece a escrever seu documento...</p>';
+    }
+
+    function showPreview(kind) {
+      const pdfActive = kind === 'pdf';
+      htmlPane.hidden = pdfActive; pdfPane.hidden = !pdfActive;
+      document.querySelector('#html-tab').classList.toggle('active', !pdfActive);
+      document.querySelector('#pdf-tab').classList.toggle('active', pdfActive);
     }
 
     async function saveFile(silent = false) {
@@ -112,6 +153,7 @@ HTML = r"""<!doctype html>
         await request('/api/build', {method: 'POST'});
         const stamp = Date.now();
         pdf.src = `/api/pdf?cache=${stamp}`;
+        showPreview('pdf');
         buildState.textContent = 'PDF atualizado';
         message('PDF atualizado com sucesso.');
       } catch (error) {
@@ -123,7 +165,10 @@ HTML = r"""<!doctype html>
     fileSelect.addEventListener('change', loadFile);
     document.querySelector('#save').addEventListener('click', () => saveFile());
     document.querySelector('#compile').addEventListener('click', compile);
+    document.querySelector('#html-tab').addEventListener('click', () => showPreview('html'));
+    document.querySelector('#pdf-tab').addEventListener('click', () => showPreview('pdf'));
     editor.addEventListener('input', () => {
+      renderLatex(editor.value);
       clearTimeout(timer);
       timer = setTimeout(() => saveFile(true).then(() => message('Alterações salvas automaticamente.')).catch(error => message(error.message, true)), 900);
     });

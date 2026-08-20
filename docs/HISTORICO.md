@@ -3,6 +3,13 @@
 Este documento resume os três commits mais recentes do projeto. A fonte de
 verdade continua sendo o histórico do Git.
 
+## Entrega atual
+
+- adiciona `docs/README.en.md` como tradução em inglês;
+- adiciona `docs/LICENSE.md` como cópia documental da licença MIT;
+- adiciona a aba `Leitura` com prévia HTML em tempo real do `.tex`;
+- mantém a aba `PDF` opcional após a compilação com TeX Live ou MiKTeX.
+
 ## 2026-08-20
 
 ### `7cc6c9d` feat(web): adiciona editor local com visualizacao PDF

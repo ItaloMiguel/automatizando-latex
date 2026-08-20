@@ -242,6 +242,12 @@ class CreateArticleTests(unittest.TestCase):
             self.assertIn("<pre><code>echo ok", rendered)
             self.assertIn("Ateliê ABNT", DOCS_HTML)
 
+    def test_latex_editor_contains_live_html_and_pdf_previews(self):
+        self.assertIn("Leitura", HTML)
+        self.assertIn("PDF", HTML)
+        self.assertIn("renderLatex", HTML)
+        self.assertIn("showPreview('pdf')", HTML)
+
     def test_docs_interface_reads_document_and_blocks_path_escape(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

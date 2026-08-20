@@ -82,6 +82,10 @@ O comando `serve` continua dedicado ao editor de um artigo individual. Essa
 separação mantém a documentação do projeto independente do conteúdo LaTeX de
 cada artigo.
 
+O portal também exibe `docs/README.en.md`, uma tradução em inglês, e
+`docs/LICENSE.md`, uma cópia documental da licença MIT. A fonte legal da licença
+continua sendo o arquivo `LICENSE` na raiz.
+
 ### Documentação do GitHub
 
 O portal tenta descobrir automaticamente o repositório a partir de:
@@ -205,10 +209,11 @@ O navegador abrirá em `http://127.0.0.1:8765`. A interface oferece:
 - salvamento automático após uma pausa na digitação;
 - botão para salvar manualmente;
 - compilação completa com LaTeX e BibTeX;
-- visualização do `main.pdf` atualizado sem sair do navegador.
+- prévia HTML em tempo real do arquivo `.tex`;
+- visualização do `main.pdf` em uma aba ao lado, quando compilado.
 
-O salvamento é em tempo real, mas a geração do PDF acontece ao clicar em
-`Compilar PDF`, pois compilar LaTeX a cada tecla seria lento. Para escolher
+O salvamento e a prévia HTML são em tempo real, mas a geração do PDF acontece
+ao clicar em `Compilar PDF`, pois compilar LaTeX a cada tecla seria lento. Para escolher
 outra porta ou evitar a abertura automática do navegador:
 
 ```bash
