@@ -24,6 +24,19 @@ DOC_SKIP_DIRS = {".git", ".venv", "__pycache__", "node_modules", "projetos"}
 GITHUB_API = "https://api.github.com"
 
 
+def _open_browser(url: str) -> bool:
+  """Abre o navegador quando há GUI; no WSL headless, apenas mantém a URL impressa."""
+  is_wsl_without_gui = "WSL_INTEROP" in os.environ and not any(
+    os.environ.get(variable) for variable in ("DISPLAY", "WAYLAND_DISPLAY", "BROWSER")
+  )
+  if is_wsl_without_gui:
+    return False
+  try:
+    return webbrowser.open(url)
+  except (OSError, webbrowser.Error):
+    return False
+
+
 HTML = r"""<!doctype html>
 <html lang="pt-BR">
 <head>
@@ -617,7 +630,7 @@ def serve_project(project_dir: Path, host: str = "127.0.0.1", port: int = 8765, 
     url = f"http://{host}:{server.server_port}/"
     print(f"Ateliê ABNT disponível em {url}")
     if open_browser:
-        threading.Timer(0.4, webbrowser.open, args=(url,)).start()
+      threading.Timer(0.4, _open_browser, args=(url,)).start()
     try:
         server.serve_forever()
     except KeyboardInterrupt:
@@ -634,7 +647,7 @@ def serve_docs(root: Path, host: str = "127.0.0.1", port: int = 8766, open_brows
     url = f"http://{host}:{server.server_port}/"
     print(f"Documentação disponível em {url}")
     if open_browser:
-        threading.Timer(0.4, webbrowser.open, args=(url,)).start()
+      threading.Timer(0.4, _open_browser, args=(url,)).start()
     try:
         server.serve_forever()
     except KeyboardInterrupt:

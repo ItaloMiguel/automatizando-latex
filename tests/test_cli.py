@@ -7,6 +7,7 @@ from http.server import ThreadingHTTPServer
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 from unittest.mock import patch
+from unittest.mock import patch as mock_patch
 
 from automatizando_latex.cli import (
     DEFAULT_OUTPUT_DIR,
@@ -28,6 +29,7 @@ from automatizando_latex.web import (
     DocsHandler,
     discover_markdown,
     markdown_to_html,
+    _open_browser,
     discover_github_markdown,
     fetch_github_markdown,
 )
@@ -292,3 +294,13 @@ class CreateArticleTests(unittest.TestCase):
     def test_github_documents_reject_path_traversal(self):
         with self.assertRaises(ValueError):
             fetch_github_markdown("italo/automatizando-latex", "../segredo.md")
+
+    @mock_patch("automatizando_latex.web.webbrowser.open")
+    def test_wsl_without_gui_does_not_call_browser(self, browser_open):
+        with patch.dict(
+            "os.environ",
+            {"WSL_INTEROP": "1", "DISPLAY": "", "WAYLAND_DISPLAY": "", "BROWSER": ""},
+            clear=False,
+        ):
+            self.assertFalse(_open_browser("http://127.0.0.1:8766"))
+        browser_open.assert_not_called()

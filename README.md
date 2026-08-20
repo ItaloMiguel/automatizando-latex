@@ -19,6 +19,9 @@ Abra `http://127.0.0.1:8766` no navegador. O portal visualiza a documentação
 do projeto e a seção `GitHub Documents` carrega arquivos Markdown do repositório
 GitHub configurado no `origin`. Para editar um artigo, use o editor separado:
 
+No WSL, o servidor imprime a URL e pode não abrir o navegador automaticamente.
+Nesse caso, abra o endereço no navegador do Windows.
+
 ```bash
 python -m automatizando_latex.cli serve projetos/meu-artigo
 ```
