@@ -58,6 +58,7 @@ class CreateArticleTests(unittest.TestCase):
             )
             main = (destination / "main.tex").read_text(encoding="utf-8")
             self.assertIn("\\documentclass[12pt,oneside,a4paper]{abntex2}", main)
+            self.assertIn("\\bibliographystyle{abntex2-alf}", main)
             configuration = (destination / "configuracao.tex").read_text(
                 encoding="utf-8"
             )

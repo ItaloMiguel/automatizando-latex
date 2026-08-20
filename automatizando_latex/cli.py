@@ -58,6 +58,7 @@ use o arquivo de referências, por exemplo: \cite{exemplo2026}.
 Retome os resultados e indique possíveis trabalhos futuros.
 
 \postextual
+\bibliographystyle{abntex2-alf}
 \bibliography{referencias}
 
 \end{document}
