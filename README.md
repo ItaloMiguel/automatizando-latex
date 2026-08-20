@@ -8,12 +8,28 @@ com fontes simples de editar e versionar no Git.
 ```bash
 git clone URL_DO_REPOSITORIO
 cd automatizando-latex
+sudo apt update
+sudo apt install -y python3-full python3-venv
+rm -rf .venv
 python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -e .
-python -m automatizando_latex.cli init meu-artigo --title "Meu artigo" --author "Seu Nome"
+.venv/bin/python -m pip install --upgrade pip
+.venv/bin/python -m pip install -e .
+.venv/bin/python -m automatizando_latex.cli init meu-artigo --title "Meu artigo" --author "Seu Nome"
 python3 __init__.py
 ```
+
+Depois do clone, confirme que o checkout está atualizado antes de executar o
+launcher:
+
+```bash
+git pull --ff-only origin main
+.venv/bin/python -c "from automatizando_latex.web_home import serve_home; print('launcher OK')"
+python3 __init__.py
+```
+
+Se aparecer `cannot import name 'serve_home' from automatizando_latex.web`, o
+clone está usando uma versão antiga ou há um arquivo local divergente. O import
+correto é `automatizando_latex.web_home`.
 
 Abra `http://127.0.0.1:8000` no navegador. A recepção apresenta a ideia do
 projeto e links para as superfícies principais. O portal visualiza a documentação
@@ -109,12 +125,20 @@ O portal tenta descobrir automaticamente o repositório a partir de:
 git remote get-url origin
 ```
 
-Para informar o repositório manualmente:
+Para informar o repositório público manualmente:
 
 ```bash
 python -m automatizando_latex.cli docs . \
 	--github-repo italo/automatizando-latex \
 	--github-branch main
+```
+
+Também é possível configurar o repositório remoto e deixar a ferramenta
+descobri-lo automaticamente:
+
+```bash
+git remote set-url origin https://github.com/SEU_USUARIO/SEU_REPOSITORIO.git
+python -m automatizando_latex.cli docs . --github-only
 ```
 
 A API usa a árvore pública do GitHub e o conteúdo bruto dos arquivos Markdown.
@@ -275,9 +299,8 @@ cd automatizando-latex
 sudo apt update
 sudo apt install -y python3-venv
 python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -e .
-python -m automatizando_latex.cli init abnt --type artigo --title "Paul_Dirac" --author "ItaloMiguel"
+.venv/bin/python -m pip install -e .
+.venv/bin/python -m automatizando_latex.cli init abnt --type artigo --title "Paul_Dirac" --author "ItaloMiguel"
 ```
 
 Isso cria a pasta `projetos/abnt`. Para gerar o PDF, a máquina também
