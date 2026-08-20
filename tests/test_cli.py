@@ -1,12 +1,14 @@
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from automatizando_latex.cli import (
     DEFAULT_OUTPUT_DIR,
     PUBLICATION_PROFILES,
     _slug,
     build_parser,
+    build_project,
     create_article,
 )
 
@@ -78,3 +80,23 @@ class CreateArticleTests(unittest.TestCase):
 
             with self.assertRaises(FileExistsError):
                 create_article(destination, "Título", "Autor")
+
+    @patch("automatizando_latex.cli.subprocess.run")
+    def test_build_project_runs_latex_and_bibtex_sequence(self, run):
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            (project / "main.tex").write_text("\\documentclass{article}", encoding="utf-8")
+
+            commands = build_project(project)
+
+            self.assertEqual(run.call_count, 4)
+            self.assertEqual(
+                [call.args[0] for call in run.call_args_list],
+                [
+                    ["pdflatex", "-interaction=nonstopmode", "main.tex"],
+                    ["bibtex", "main"],
+                    ["pdflatex", "-interaction=nonstopmode", "main.tex"],
+                    ["pdflatex", "-interaction=nonstopmode", "main.tex"],
+                ],
+            )
+            self.assertEqual(len(commands), 4)

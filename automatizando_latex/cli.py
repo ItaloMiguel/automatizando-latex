@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import re
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -188,6 +189,43 @@ def create_article(
     return created
 
 
+def build_project(project_dir: Path, tex_file: str = "main.tex") -> list[str]:
+    """Compila um projeto com as passagens necessárias para atualizar referências."""
+    source = project_dir / tex_file
+    if not project_dir.is_dir():
+        raise FileNotFoundError(f"diretório do projeto não encontrado: {project_dir}")
+    if not source.is_file():
+        raise FileNotFoundError(f"arquivo LaTeX não encontrado: {source}")
+
+    document = source.stem
+    commands = [
+        ["pdflatex", "-interaction=nonstopmode", tex_file],
+        ["bibtex", document],
+        ["pdflatex", "-interaction=nonstopmode", tex_file],
+        ["pdflatex", "-interaction=nonstopmode", tex_file],
+    ]
+    for command in commands:
+        try:
+            result = subprocess.run(
+                command,
+                cwd=project_dir,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        except FileNotFoundError as error:
+            raise RuntimeError(
+                f"comando não encontrado: {command[0]}. "
+                "Instale uma distribuição LaTeX com BibTeX."
+            ) from error
+        except subprocess.CalledProcessError as error:
+            output = (error.stdout or "") + (error.stderr or "")
+            raise RuntimeError(
+                f"falha ao executar {' '.join(command)}:\n{output[-4000:]}"
+            ) from error
+    return [" ".join(command) for command in commands]
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="abnt", description="Cria projetos de artigos LaTeX no padrão ABNT."
@@ -209,6 +247,13 @@ def build_parser() -> argparse.ArgumentParser:
         default="artigo",
         help="tipo de publicação (padrão: artigo)",
     )
+    build_parser = subparsers.add_parser(
+        "build", help="compila um projeto com LaTeX e BibTeX"
+    )
+    build_parser.add_argument("project", type=Path, help="diretório do projeto")
+    build_parser.add_argument(
+        "--tex-file", default="main.tex", help="arquivo principal (padrão: main.tex)"
+    )
     return parser
 
 
@@ -229,6 +274,15 @@ def main() -> int:
         print(f"Projeto criado em {destination}")
         for path in created:
             print(f"  - {path.name}")
+    elif args.command == "build":
+        try:
+            commands = build_project(args.project, args.tex_file)
+        except (FileNotFoundError, RuntimeError) as error:
+            print(f"Erro: {error}")
+            return 1
+        print(f"Projeto compilado em {args.project}")
+        for command in commands:
+            print(f"  - {command}")
     return 0
 
 
