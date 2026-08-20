@@ -6,15 +6,22 @@ com fontes simples de editar e versionar no Git.
 ## Fluxo rápido
 
 ```bash
+git clone URL_DO_REPOSITORIO
+cd automatizando-latex
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e .
 python -m automatizando_latex.cli init meu-artigo --title "Meu artigo" --author "Seu Nome"
-python -m automatizando_latex.cli serve projetos/meu-artigo
+python3 __init__.py
 ```
 
-Abra `http://127.0.0.1:8765` no navegador. Edite os arquivos, salve
-automaticamente e use **Compilar PDF** para atualizar a visualização.
+Abra `http://127.0.0.1:8766` no navegador. O portal visualiza a documentação
+do projeto e a seção `GitHub Documents` carrega arquivos Markdown do repositório
+GitHub configurado no `origin`. Para editar um artigo, use o editor separado:
+
+```bash
+python -m automatizando_latex.cli serve projetos/meu-artigo
+```
 
 O projeto mantém os fontes em arquivos de texto para que cada mudança possa ser
 revisada e versionada com Git. Consulte [CONTRIBUTING.md](CONTRIBUTING.md) para
@@ -60,6 +67,12 @@ Para navegar pela documentação Markdown do projeto em uma interface visual:
 python -m automatizando_latex.cli docs .
 ```
 
+O mesmo portal é iniciado diretamente pela raiz com:
+
+```bash
+python3 __init__.py
+```
+
 O portal abre em `http://127.0.0.1:8766` e encontra automaticamente arquivos
 `.md` na raiz informada, incluindo `README.md`, `CONTRIBUTING.md` e a pasta
 `docs/`. Ele oferece navegação lateral, busca por nome, renderização de títulos,
@@ -68,6 +81,34 @@ listas, tabelas, links, citações e blocos de código, além de layout responsi
 O comando `serve` continua dedicado ao editor de um artigo individual. Essa
 separação mantém a documentação do projeto independente do conteúdo LaTeX de
 cada artigo.
+
+### Documentação do GitHub
+
+O portal tenta descobrir automaticamente o repositório a partir de:
+
+```bash
+git remote get-url origin
+```
+
+Para informar o repositório manualmente:
+
+```bash
+python -m automatizando_latex.cli docs . \
+	--github-repo italo/automatizando-latex \
+	--github-branch main
+```
+
+A API usa a árvore pública do GitHub e o conteúdo bruto dos arquivos Markdown.
+Para repositórios privados, configure um token com acesso de leitura antes de
+iniciar o servidor:
+
+```bash
+export GITHUB_TOKEN=seu_token_de_leitura
+python3 __init__.py
+```
+
+O token nunca é exibido na página. Não o commite nem o inclua em arquivos do
+projeto.
 
 O comando `build` executa a sequência completa:
 

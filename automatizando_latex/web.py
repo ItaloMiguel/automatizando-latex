@@ -4,8 +4,12 @@ from __future__ import annotations
 
 import json
 import html
+import os
 import re
+import subprocess
 import threading
+import urllib.error
+import urllib.request
 import webbrowser
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -17,6 +21,7 @@ from .cli import REQUIRED_PROJECT_FILES, build_project, check_project
 
 EDITOR_FILES = (*REQUIRED_PROJECT_FILES,)
 DOC_SKIP_DIRS = {".git", ".venv", "__pycache__", "node_modules", "projetos"}
+GITHUB_API = "https://api.github.com"
 
 
 HTML = r"""<!doctype html>
@@ -186,6 +191,8 @@ DOCS_HTML = r"""<!doctype html>
     <p class="eyebrow">Arquivos Markdown</p>
     <input id="search" class="search" type="search" placeholder="Filtrar documentos..." aria-label="Filtrar documentos">
     <nav id="nav" aria-label="Documentos"></nav>
+    <p class="eyebrow" style="margin-top:28px">GitHub Documents</p>
+    <nav id="github-nav" aria-label="Documentos do GitHub"></nav>
   </aside>
   <div class="content-wrap">
     <header><span id="path">Documentação</span><a href="https://github.com" target="_blank" rel="noreferrer">GitHub ↗</a></header>
@@ -198,6 +205,7 @@ DOCS_HTML = r"""<!doctype html>
   const pathLabel = document.querySelector('#path');
   const search = document.querySelector('#search');
   let documents = [];
+  let githubDocuments = [];
   async function request(url) { const response = await fetch(url); const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Falha ao carregar documentação.'); return data; }
   function drawNav(filter = '') {
     nav.innerHTML = '';
@@ -206,12 +214,24 @@ DOCS_HTML = r"""<!doctype html>
     link.innerHTML = `${doc.title}<small>${doc.path}</small>`; link.addEventListener('click', event => { event.preventDefault(); loadDoc(doc.path); }); nav.appendChild(link);
     });
   }
+    function drawGithubNav(filter = '') {
+      const target = document.querySelector('#github-nav'); target.innerHTML = '';
+      githubDocuments.filter(doc => `${doc.title} ${doc.path}`.toLowerCase().includes(filter.toLowerCase())).forEach(doc => {
+        const link = document.createElement('a'); link.href = '#github-' + encodeURIComponent(doc.path); link.innerHTML = `${doc.title}<small>${doc.path}</small>`;
+        link.addEventListener('click', event => { event.preventDefault(); loadGithubDoc(doc.path); }); target.appendChild(link);
+      });
+      if (!githubDocuments.length) target.innerHTML = '<span style="display:block;padding:8px 10px;color:#8fa5ac;font:11px ui-monospace,monospace">repositório não configurado</span>';
+    }
+    async function loadGithubDoc(path) {
+      try { const doc = await request(`/api/github-doc?path=${encodeURIComponent(path)}`); article.innerHTML = doc.html; pathLabel.textContent = 'GitHub / ' + doc.path; document.querySelectorAll('nav a').forEach(link => link.classList.remove('active')); }
+      catch (error) { article.innerHTML = `<p class="empty">${error.message}</p>`; }
+    }
   async function loadDoc(path) {
     try { const doc = await request(`/api/doc?path=${encodeURIComponent(path)}`); article.innerHTML = doc.html; pathLabel.textContent = doc.path; document.querySelectorAll('nav a').forEach(link => link.classList.toggle('active', link.dataset.path === path)); history.replaceState({}, '', `#${encodeURIComponent(path)}`); }
     catch (error) { article.innerHTML = `<p class="empty">${error.message}</p>`; }
   }
-  search.addEventListener('input', () => drawNav(search.value));
-  request('/api/docs').then(data => { documents = data.documents; drawNav(); const initial = decodeURIComponent(location.hash.slice(1)); loadDoc(documents.some(doc => doc.path === initial) ? initial : documents[0].path); }).catch(error => { article.innerHTML = `<p class="empty">${error.message}</p>`; });
+  search.addEventListener('input', () => { drawNav(search.value); drawGithubNav(search.value); });
+  Promise.all([request('/api/docs'), request('/api/github-docs')]).then(([local, remote]) => { documents = local.documents; githubDocuments = remote.documents; drawNav(); drawGithubNav(); const initial = decodeURIComponent(location.hash.slice(1)); if (initial.startsWith('github-')) loadGithubDoc(initial.slice(7)); else loadDoc(documents.some(doc => doc.path === initial) ? initial : documents[0].path); }).catch(error => { article.innerHTML = `<p class="empty">${error.message}</p>`; });
   </script>
 </body>
 </html>"""
@@ -310,6 +330,56 @@ def discover_markdown(root: Path) -> list[dict[str, str]]:
   return sorted(documents, key=lambda item: (item["path"].lower() != "readme.md", item["path"].lower()))
 
 
+def github_repository(root: Path) -> str | None:
+  """Obtém owner/repositório a partir do remote origin, quando disponível."""
+  try:
+    remote = subprocess.check_output(
+      ["git", "-C", str(root), "config", "--get", "remote.origin.url"],
+      text=True,
+      stderr=subprocess.DEVNULL,
+    ).strip()
+  except (OSError, subprocess.CalledProcessError):
+    return None
+  match = re.search(r"github\.com[:/]([^/]+)/([^/]+?)(?:\.git)?$", remote)
+  return f"{match.group(1)}/{match.group(2)}" if match else None
+
+
+def discover_github_markdown(root: Path, repository: str | None = None, branch: str = "main") -> list[dict[str, str]]:
+  """Lista Markdown do repositório GitHub pela API de árvores Git."""
+  repository = repository or github_repository(root)
+  if not repository:
+    return []
+  url = f"{GITHUB_API}/repos/{repository}/git/trees/{branch}?recursive=1"
+  request = urllib.request.Request(url, headers={"Accept": "application/vnd.github+json", "User-Agent": "automatizando-latex"})
+  token = os.environ.get("GITHUB_TOKEN")
+  if token:
+    request.add_header("Authorization", f"Bearer {token}")
+  try:
+    with urllib.request.urlopen(request, timeout=8) as response:
+      tree = json.loads(response.read().decode("utf-8"))
+  except (urllib.error.URLError, json.JSONDecodeError, TimeoutError):
+    return []
+  documents = []
+  for item in tree.get("tree", []):
+    path = item.get("path", "")
+    if item.get("type") == "blob" and path.lower().endswith(".md"):
+      documents.append({"path": path, "title": Path(path).stem.replace("-", " ").title()})
+  return sorted(documents, key=lambda item: (item["path"].lower() != "readme.md", item["path"].lower()))
+
+
+def fetch_github_markdown(repository: str, path: str, branch: str = "main") -> str:
+  """Baixa um Markdown específico do GitHub e renderiza apenas seu conteúdo."""
+  if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository) or ".." in Path(path).parts:
+    raise ValueError("documento GitHub inválido")
+  url = f"https://raw.githubusercontent.com/{repository}/{branch}/{path}"
+  request = urllib.request.Request(url, headers={"User-Agent": "automatizando-latex"})
+  try:
+    with urllib.request.urlopen(request, timeout=8) as response:
+      return response.read().decode("utf-8")
+  except (urllib.error.URLError, UnicodeDecodeError) as error:
+    raise FileNotFoundError(f"documento GitHub não encontrado: {path}") from error
+
+
 class ProjectHandler(BaseHTTPRequestHandler):
     """Endpoints mínimos para a interface local."""
 
@@ -395,6 +465,8 @@ class DocsHandler(BaseHTTPRequestHandler):
     """Endpoints do portal de documentação Markdown."""
 
     docs_root: Path
+    github_repo: str | None = None
+    github_branch: str = "main"
 
     def _send_json(self, payload: dict, status: HTTPStatus = HTTPStatus.OK) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
@@ -432,6 +504,14 @@ class DocsHandler(BaseHTTPRequestHandler):
                 relative_path = parse_qs(parsed.query).get("path", [""])[0]
                 path = self._safe_doc(relative_path)
                 self._send_json({"path": relative_path, "html": markdown_to_html(path.read_text(encoding="utf-8"))})
+            elif parsed.path == "/api/github-docs":
+              self._send_json({"repository": self.github_repo, "documents": discover_github_markdown(self.docs_root, self.github_repo, self.github_branch)})
+            elif parsed.path == "/api/github-doc":
+              relative_path = parse_qs(parsed.query).get("path", [""])[0]
+              repository = self.github_repo or github_repository(self.docs_root)
+              if not repository:
+                raise ValueError("repositório GitHub não configurado")
+              self._send_json({"path": relative_path, "html": markdown_to_html(fetch_github_markdown(repository, relative_path, self.github_branch))})
             else:
                 self._error(ValueError("rota não encontrada"), HTTPStatus.NOT_FOUND)
         except FileNotFoundError as error:
@@ -460,10 +540,10 @@ def serve_project(project_dir: Path, host: str = "127.0.0.1", port: int = 8765, 
         server.server_close()
 
 
-def serve_docs(root: Path, host: str = "127.0.0.1", port: int = 8766, open_browser: bool = True) -> None:
+def serve_docs(root: Path, host: str = "127.0.0.1", port: int = 8766, open_browser: bool = True, github_repo: str | None = None, github_branch: str = "main") -> None:
     """Inicia o portal local que exibe os Markdown da raiz informada."""
     discover_markdown(root)
-    handler = type("BoundDocsHandler", (DocsHandler,), {"docs_root": root.resolve()})
+    handler = type("BoundDocsHandler", (DocsHandler,), {"docs_root": root.resolve(), "github_repo": github_repo, "github_branch": github_branch})
     server = ThreadingHTTPServer((host, port), handler)
     url = f"http://{host}:{server.server_port}/"
     print(f"Documentação disponível em {url}")

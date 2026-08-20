@@ -28,6 +28,8 @@ from automatizando_latex.web import (
     DocsHandler,
     discover_markdown,
     markdown_to_html,
+    discover_github_markdown,
+    fetch_github_markdown,
 )
 
 
@@ -261,3 +263,22 @@ class CreateArticleTests(unittest.TestCase):
                 server.shutdown()
                 server.server_close()
                 outside.unlink()
+
+    @patch("automatizando_latex.web.urllib.request.urlopen")
+    def test_github_documents_are_loaded_from_api(self, urlopen_mock):
+        response = urlopen_mock.return_value.__enter__.return_value
+        response.read.return_value = json.dumps(
+            {"tree": [{"path": "README.md", "type": "blob"}, {"path": "src/app.py", "type": "blob"}, {"path": "docs/guia.md", "type": "blob"}]}
+        ).encode("utf-8")
+
+        with tempfile.TemporaryDirectory() as directory:
+            documents = discover_github_markdown(Path(directory), "italo/automatizando-latex")
+
+        self.assertEqual(
+            [document["path"] for document in documents], ["README.md", "docs/guia.md"]
+        )
+        urlopen_mock.assert_called_once()
+
+    def test_github_documents_reject_path_traversal(self):
+        with self.assertRaises(ValueError):
+            fetch_github_markdown("italo/automatizando-latex", "../segredo.md")

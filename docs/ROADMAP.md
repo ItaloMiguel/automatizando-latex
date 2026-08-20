@@ -32,6 +32,8 @@ de erro clara.
 
 ## Já entregue
 
+- launcher raiz executável com `python3 __init__.py`;
+- seção `GitHub Documents` com leitura de Markdown pela API do GitHub;
 - portal visual que descobre e renderiza arquivos Markdown com `docs`;
 - editor local com salvamento automático e visualização de PDF com `serve`;
 - comandos de edição para seções, tabelas e referências;

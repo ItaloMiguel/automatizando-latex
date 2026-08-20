@@ -408,6 +408,10 @@ def build_parser() -> argparse.ArgumentParser:
     docs_parser.add_argument("--host", default="127.0.0.1")
     docs_parser.add_argument("--port", type=int, default=8766)
     docs_parser.add_argument(
+        "--github-repo", help="repositório owner/name; por padrão usa o remote origin"
+    )
+    docs_parser.add_argument("--github-branch", default="main")
+    docs_parser.add_argument(
         "--no-browser", action="store_true", help="não abrir o navegador automaticamente"
     )
     return parser
@@ -490,7 +494,14 @@ def main() -> int:
         try:
             from .web import serve_docs
 
-            serve_docs(args.root, args.host, args.port, not args.no_browser)
+            serve_docs(
+                args.root,
+                args.host,
+                args.port,
+                not args.no_browser,
+                args.github_repo,
+                args.github_branch,
+            )
         except (FileNotFoundError, OSError, ValueError) as error:
             print(f"Erro: {error}")
             return 1
