@@ -3,6 +3,24 @@
 Ferramenta para iniciar artigos científicos em LaTeX usando a classe `abntex2`,
 com fontes simples de editar e versionar no Git.
 
+## Fluxo rápido
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e .
+python -m automatizando_latex.cli init meu-artigo --title "Meu artigo" --author "Seu Nome"
+python -m automatizando_latex.cli serve projetos/meu-artigo
+```
+
+Abra `http://127.0.0.1:8765` no navegador. Edite os arquivos, salve
+automaticamente e use **Compilar PDF** para atualizar a visualização.
+
+O projeto mantém os fontes em arquivos de texto para que cada mudança possa ser
+revisada e versionada com Git. Consulte [CONTRIBUTING.md](CONTRIBUTING.md) para
+commits e Pull Requests, [docs/HISTORICO.md](docs/HISTORICO.md) para o histórico
+recente e [docs/ROADMAP.md](docs/ROADMAP.md) para ideias futuras.
+
 ## Requisitos
 
 - Python 3.10 ou superior;
@@ -25,6 +43,13 @@ Crie um artigo:
 python -m automatizando_latex.cli init meu-artigo --title "Meu primeiro artigo" --author "Seu Nome"
 cd projetos/meu-artigo
 python -m automatizando_latex.cli build .
+```
+
+Os comandos disponíveis são `init`, `serve`, `build`, `check`, `section`,
+`table` e `reference`. Veja todos os argumentos com:
+
+```bash
+python -m automatizando_latex.cli --help
 ```
 
 O comando `build` executa a sequência completa:
