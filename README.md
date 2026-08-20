@@ -35,6 +35,14 @@ revisada e versionada com Git. Consulte [CONTRIBUTING.md](CONTRIBUTING.md) para
 commits e Pull Requests, [docs/HISTORICO.md](docs/HISTORICO.md) para o histórico
 recente e [docs/ROADMAP.md](docs/ROADMAP.md) para ideias futuras.
 
+## Organização do código web
+
+O código HTTP é dividido por responsabilidade: `web_security.py` concentra
+headers e abertura segura do navegador; `web_home.py` concentra a recepção em
+`8000`; `web.py` mantém as APIs de edição e documentação e reexporta símbolos
+antigos para compatibilidade. O launcher raiz importa a recepção diretamente de
+`web_home.py`.
+
 ## Requisitos
 
 - Python 3.10 ou superior;

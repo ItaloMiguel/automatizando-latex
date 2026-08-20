@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from automatizando_latex.web import serve_home
+from automatizando_latex.web_home import serve_home
 
 
 if __name__ == "__main__":

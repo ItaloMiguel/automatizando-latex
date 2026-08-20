@@ -724,16 +724,5 @@ def serve_docs(root: Path, host: str = "127.0.0.1", port: int = 8766, open_brows
         server.server_close()
 
 
-    def serve_home(host: str = "127.0.0.1", port: int = 8000, open_browser: bool = True) -> None:
-      """Inicia a recepção pública local em uma porta sem escrita de arquivos."""
-      server = ThreadingHTTPServer((host, port), HomeHandler)
-      url = f"http://{host}:{server.server_port}/"
-      print(f"Automatizando LaTeX disponível em {url}")
-      if open_browser:
-        threading.Timer(0.4, _open_browser, args=(url,)).start()
-      try:
-        server.serve_forever()
-      except KeyboardInterrupt:
-        print("\nRecepção encerrada.")
-      finally:
-        server.server_close()
+# Compatibility facade: new code should import the reception from web_home.
+from .web_home import serve_home

@@ -4,6 +4,7 @@ Ideias que podem melhorar a experiência sem aumentar muito a complexidade.
 
 ## Curto prazo
 
+- corrigir `python3 __init__.py`: mover `serve_home` para o nível do módulo em `web.py` e adicionar teste de importação;
 - adicionar um botão para criar seções, tabelas e referências pela interface;
 - mostrar o erro de compilação em um painel com destaque da linha;
 - incluir um comando `clean` para remover arquivos auxiliares do LaTeX;
@@ -32,6 +33,7 @@ de erro clara.
 
 ## Já entregue
 
+- separação inicial do código web em segurança e recepção;
 - launcher raiz executável com `python3 __init__.py`;
 - seção `GitHub Documents` com leitura de Markdown pela API do GitHub;
 - tradução em inglês e licença MIT disponíveis no portal documental;
