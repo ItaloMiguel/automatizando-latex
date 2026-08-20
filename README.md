@@ -108,6 +108,35 @@ Depois cite a chave no texto com `\\cite{silva2026}` e compile:
 python -m automatizando_latex.cli build projetos/meu-artigo
 ```
 
+## Interface de edição
+
+Abra o editor local apontando para um projeto:
+
+```bash
+python -m automatizando_latex.cli serve projetos/meu-artigo
+```
+
+O navegador abrirá em `http://127.0.0.1:8765`. A interface oferece:
+
+- edição de `main.tex`, `configuracao.tex` e `referencias.bib`;
+- salvamento automático após uma pausa na digitação;
+- botão para salvar manualmente;
+- compilação completa com LaTeX e BibTeX;
+- visualização do `main.pdf` atualizado sem sair do navegador.
+
+O salvamento é em tempo real, mas a geração do PDF acontece ao clicar em
+`Compilar PDF`, pois compilar LaTeX a cada tecla seria lento. Para escolher
+outra porta ou evitar a abertura automática do navegador:
+
+```bash
+python -m automatizando_latex.cli serve projetos/meu-artigo \
+	--port 9000 \
+	--no-browser
+```
+
+Instale TeX Live ou MiKTeX para habilitar a visualização do PDF. Sem LaTeX, o
+editor e o salvamento continuam disponíveis.
+
 ## Executar na AWS
 
 Como o projeto é uma CLI, a forma mais simples de testá-lo na AWS é pelo
@@ -166,4 +195,6 @@ python -m pytest
 
 ## Próximos passos
 
-- adicionar uma interface de edição e visualização em tempo real.
+- adicionar histórico visual de versões e comparação entre commits;
+- incluir suporte a imagens e upload de arquivos do projeto;
+- criar uma fila de compilação para trabalhos longos.

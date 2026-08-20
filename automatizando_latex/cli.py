@@ -391,6 +391,15 @@ def build_parser() -> argparse.ArgumentParser:
         "check", help="verifica os arquivos essenciais de um projeto"
     )
     check_parser.add_argument("project", type=Path, help="diretório do projeto")
+    serve_parser = subparsers.add_parser(
+        "serve", help="abre o editor e a visualização local do projeto"
+    )
+    serve_parser.add_argument("project", type=Path, help="diretório do projeto")
+    serve_parser.add_argument("--host", default="127.0.0.1")
+    serve_parser.add_argument("--port", type=int, default=8765)
+    serve_parser.add_argument(
+        "--no-browser", action="store_true", help="não abrir o navegador automaticamente"
+    )
     return parser
 
 
@@ -459,6 +468,14 @@ def main() -> int:
         print(f"Projeto válido: {args.project}")
         for path in files:
             print(f"  - {path.name}")
+    elif args.command == "serve":
+        try:
+            from .web import serve_project
+
+            serve_project(args.project, args.host, args.port, not args.no_browser)
+        except (FileNotFoundError, OSError, ValueError) as error:
+            print(f"Erro: {error}")
+            return 1
     return 0
 
 

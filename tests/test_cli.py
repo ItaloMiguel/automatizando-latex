@@ -1,6 +1,11 @@
 from pathlib import Path
 import tempfile
+import json
+import threading
 import unittest
+from http.server import ThreadingHTTPServer
+from urllib.error import HTTPError
+from urllib.request import Request, urlopen
 from unittest.mock import patch
 
 from automatizando_latex.cli import (
@@ -15,6 +20,7 @@ from automatizando_latex.cli import (
     create_article,
     insert_section,
 )
+from automatizando_latex.web import EDITOR_FILES, ProjectHandler, HTML
 
 
 class CreateArticleTests(unittest.TestCase):
@@ -149,3 +155,59 @@ class CreateArticleTests(unittest.TestCase):
                 {path.name for path in check_project(project)},
                 {"main.tex", "configuracao.tex", "referencias.bib"},
             )
+
+    def test_web_interface_reads_and_saves_project_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory) / "projeto"
+            create_article(project, "Título", "Autor")
+            handler = type(
+                "TestProjectHandler", (ProjectHandler,), {"project_dir": project}
+            )
+            server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            base_url = f"http://127.0.0.1:{server.server_port}"
+            try:
+                with urlopen(f"{base_url}/api/project") as response:
+                    project_data = json.loads(response.read())
+                self.assertEqual(project_data["files"], list(EDITOR_FILES))
+
+                payload = json.dumps(
+                    {"name": "main.tex", "content": "conteúdo atualizado"}
+                ).encode("utf-8")
+                request = Request(
+                    f"{base_url}/api/file",
+                    data=payload,
+                    method="PUT",
+                    headers={"Content-Type": "application/json"},
+                )
+                with urlopen(request) as response:
+                    self.assertEqual(response.status, 200)
+                self.assertEqual(
+                    (project / "main.tex").read_text(encoding="utf-8"),
+                    "conteúdo atualizado",
+                )
+            finally:
+                server.shutdown()
+                server.server_close()
+
+    def test_web_interface_does_not_expose_other_files(self):
+        self.assertIn("Ateliê ABNT", HTML)
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory) / "projeto"
+            create_article(project, "Título", "Autor")
+            (project / "segredo.txt").write_text("segredo", encoding="utf-8")
+            handler = type(
+                "TestProjectHandler", (ProjectHandler,), {"project_dir": project}
+            )
+            server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                with self.assertRaises(HTTPError) as error:
+                    urlopen(f"http://127.0.0.1:{server.server_port}/api/file?name=segredo.txt")
+                self.assertEqual(error.exception.code, 400)
+                error.exception.close()
+            finally:
+                server.shutdown()
+                server.server_close()
