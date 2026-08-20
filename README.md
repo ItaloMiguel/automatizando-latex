@@ -27,6 +27,20 @@ cd meu-artigo
 pdflatex main.tex
 ```
 
+O tipo padrão é `artigo`. Também é possível criar `tcc`, `monografia`,
+`dissertacao` ou `tese`:
+
+```bash
+python -m automatizando_latex.cli init meu-tcc \
+	--type tcc \
+	--title "Meu trabalho de conclusão" \
+	--author "Seu Nome"
+```
+
+Cada tipo ajusta `\\tipotrabalho` e `\\preambulo` em `configuracao.tex`. Os
+campos comuns, como instituição, cidade e orientador, continuam editáveis no
+arquivo gerado.
+
 Para consultar a ajuda, execute o comando separadamente:
 
 ```powershell
@@ -46,7 +60,7 @@ sudo apt install -y python3-venv
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e .
-python -m automatizando_latex.cli init abnt --title "Paul_Dirac" --author "ItaloMiguel"
+python -m automatizando_latex.cli init abnt --type artigo --title "Paul_Dirac" --author "ItaloMiguel"
 ```
 
 Isso cria a pasta `abnt` no diretório atual. Para gerar o PDF, a máquina também
@@ -85,7 +99,6 @@ python -m pytest
 
 ## Próximos passos
 
-- adicionar suporte a múltiplos tipos de publicação;
 - incluir uma rotina de compilação completa com BibTeX;
 - criar comandos para inserir seções, tabelas e referências;
 - adicionar uma interface de edição e visualização em tempo real.

@@ -4,7 +4,11 @@ from __future__ import annotations
 
 import argparse
 import re
+from dataclasses import dataclass
 from pathlib import Path
+
+
+DEFAULT_OUTPUT_DIR = "projetos"
 
 
 TEMPLATE = r"""\documentclass[12pt,oneside,a4paper]{abntex2}
@@ -70,6 +74,38 @@ CONFIG_TEMPLATE = r"""% Dados usados na capa e na folha de rosto.
 \orientador{Nome do orientador}
 """
 
+
+@dataclass(frozen=True)
+class PublicationProfile:
+    """Metadados específicos de um tipo de publicação."""
+
+    label: str
+    preambulo: str
+
+
+PUBLICATION_PROFILES = {
+    "artigo": PublicationProfile(
+        "Artigo científico",
+        "Artigo apresentado como requisito para publicação.",
+    ),
+    "tcc": PublicationProfile(
+        "Trabalho de conclusão de curso",
+        "Trabalho de conclusão de curso apresentado como requisito para obtenção do grau.",
+    ),
+    "monografia": PublicationProfile(
+        "Monografia",
+        "Monografia apresentada como requisito para obtenção do título.",
+    ),
+    "dissertacao": PublicationProfile(
+        "Dissertação",
+        "Dissertação apresentada como requisito para obtenção do título de mestre.",
+    ),
+    "tese": PublicationProfile(
+        "Tese",
+        "Tese apresentada como requisito para obtenção do título de doutor.",
+    ),
+}
+
 BIB_TEMPLATE = r"""@article{exemplo2026,
   author  = {Sobrenome, Nome},
   title   = {Título da obra citada},
@@ -107,10 +143,22 @@ def _latex_escape(value: str) -> str:
     return "".join(replacements.get(character, character) for character in value)
 
 
-def create_article(destination: Path, title: str, author: str) -> list[Path]:
+def create_article(
+    destination: Path,
+    title: str,
+    author: str,
+    publication_type: str = "artigo",
+) -> list[Path]:
     """Cria um projeto de artigo e retorna os arquivos criados."""
     if destination.exists():
         raise FileExistsError(f"o diretório já existe: {destination}")
+    try:
+        profile = PUBLICATION_PROFILES[publication_type]
+    except KeyError as error:
+        valid_types = ", ".join(PUBLICATION_PROFILES)
+        raise ValueError(
+            f"tipo de publicação inválido: {publication_type}; use: {valid_types}"
+        ) from error
 
     destination.mkdir(parents=True)
     files = {
@@ -119,11 +167,16 @@ def create_article(destination: Path, title: str, author: str) -> list[Path]:
             "Título do artigo", _latex_escape(title)
         ).replace(
             "Nome do autor", _latex_escape(author)
+        ).replace(
+            "Artigo científico", profile.label
+        ).replace(
+            "Artigo apresentado como requisito para publicação.", profile.preambulo
         ),
         "referencias.bib": BIB_TEMPLATE,
         "README.md": (
             f"# {title}\n\n"
-            "Artigo iniciado com `automatizando-latex`. Edite `main.tex`, "
+            f"Projeto de {profile.label.lower()} iniciado com `automatizando-latex`. "
+            "Edite `main.tex`, "
             "`configuracao.tex` e `referencias.bib`.\n"
         ),
     }
@@ -144,15 +197,32 @@ def build_parser() -> argparse.ArgumentParser:
     init_parser.add_argument("name", help="nome do diretório do artigo")
     init_parser.add_argument("--title", default="Título do artigo")
     init_parser.add_argument("--author", default="Nome do autor")
+    init_parser.add_argument(
+        "--output-dir",
+        default=DEFAULT_OUTPUT_DIR,
+        help=f"pasta para os projetos (padrão: {DEFAULT_OUTPUT_DIR}/)",
+    )
+    init_parser.add_argument(
+        "--type",
+        dest="publication_type",
+        choices=tuple(PUBLICATION_PROFILES),
+        default="artigo",
+        help="tipo de publicação (padrão: artigo)",
+    )
     return parser
 
 
 def main() -> int:
     args = build_parser().parse_args()
     if args.command == "init":
-        destination = Path.cwd() / _slug(args.name)
+        output_dir = Path(args.output_dir)
+        if not output_dir.is_absolute():
+            output_dir = Path.cwd() / output_dir
+        destination = output_dir / _slug(args.name)
         try:
-            created = create_article(destination, args.title, args.author)
+            created = create_article(
+                destination, args.title, args.author, args.publication_type
+            )
         except (FileExistsError, ValueError) as error:
             print(f"Erro: {error}")
             return 1
