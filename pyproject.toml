@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "automatizando-latex"
+version = "0.1.0"
+description = "Geração de projetos de artigos LaTeX no padrão ABNT."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "Italo Leite" }]
+dependencies = []
+
+[project.scripts]
+abnt = "automatizando_latex.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["automatizando_latex*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
