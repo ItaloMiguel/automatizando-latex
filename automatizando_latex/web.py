@@ -22,6 +22,63 @@ from .cli import REQUIRED_PROJECT_FILES, build_project, check_project
 EDITOR_FILES = (*REQUIRED_PROJECT_FILES,)
 DOC_SKIP_DIRS = {".git", ".venv", "__pycache__", "node_modules", "projetos"}
 GITHUB_API = "https://api.github.com"
+MAX_BODY_BYTES = 1_048_576
+
+
+HOME_HTML = r"""<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Automatizando LaTeX: escrita, documentação e versionamento de publicações ABNT.">
+  <title>Automatizando LaTeX</title>
+  <style>
+    :root { --ink: #172936; --muted: #687a80; --paper: #f4f6f3; --line: #d9e1e2; --accent: #d87539; --link: #176b87; }
+    * { box-sizing: border-box; } body { margin: 0; color: var(--ink); background: var(--paper); font: 17px/1.7 Georgia, 'Times New Roman', serif; }
+    header { display: flex; justify-content: space-between; align-items: center; padding: 22px 7vw; border-bottom: 1px solid var(--line); background: #fff; }
+    header strong { font-size: 17px; letter-spacing: .04em; } header span { color: var(--muted); font: 11px ui-monospace, monospace; }
+    main { max-width: 980px; margin: 0 auto; padding: 12vh 7vw 15vh; } .kicker { color: var(--accent); font: 12px ui-monospace, monospace; letter-spacing: .14em; text-transform: uppercase; }
+    h1 { max-width: 760px; margin: 20px 0; color: var(--ink); font-size: clamp(42px, 8vw, 86px); font-weight: normal; line-height: 1.02; }
+    .intro { max-width: 660px; color: var(--muted); font-size: 20px; } .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 34px; }
+    a { display: inline-block; padding: 11px 15px; border: 1px solid var(--ink); color: var(--ink); text-decoration: none; font: 13px ui-monospace, monospace; }
+    a.primary { border-color: var(--accent); color: #fff; background: var(--accent); } a:hover { border-color: var(--link); }
+    .note { margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+  </style>
+</head>
+<body><header><strong>Automatizando LaTeX</strong><span>ABNT · LATEX · GIT</span></header>
+<main><p class="kicker">Escrita acadêmica aberta</p><h1>Do primeiro rascunho à publicação.</h1>
+<p class="intro">Uma pequena oficina para criar artigos ABNT, editar LaTeX, acompanhar versões e manter a documentação do projeto em um só lugar.</p>
+<div class="actions"><a class="primary" href="http://127.0.0.1:8766/">Ler documentação</a><a href="http://127.0.0.1:8765/">Abrir editor</a></div>
+<p class="note">A recepção roda localmente por padrão. Os serviços de documentação e edição são iniciados separadamente para manter cada superfície simples e segura.</p></main></body></html>"""
+
+
+class SecureHandler(BaseHTTPRequestHandler):
+    """Adiciona headers mínimos de segurança aos servidores locais."""
+
+    def end_headers(self) -> None:
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "SAMEORIGIN")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("Content-Security-Policy", "default-src 'self'; frame-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'")
+        super().end_headers()
+
+
+class HomeHandler(SecureHandler):
+    """Entrega somente a página inicial do projeto."""
+
+    def do_GET(self) -> None:
+        if urlparse(self.path).path != "/":
+            self.send_error(HTTPStatus.NOT_FOUND)
+            return
+        body = HOME_HTML.encode("utf-8")
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, format: str, *args: object) -> None:
+        return
 
 
 def _open_browser(url: str) -> bool:
@@ -485,7 +542,7 @@ def fetch_github_markdown(repository: str, path: str, branch: str = "main") -> s
     raise FileNotFoundError(f"documento GitHub não encontrado: {path}") from error
 
 
-class ProjectHandler(BaseHTTPRequestHandler):
+class ProjectHandler(SecureHandler):
     """Endpoints mínimos para a interface local."""
 
     project_dir: Path
@@ -545,6 +602,8 @@ class ProjectHandler(BaseHTTPRequestHandler):
             return
         try:
             length = int(self.headers.get("Content-Length", "0"))
+            if length < 0 or length > MAX_BODY_BYTES:
+                raise ValueError("requisição excede o limite de 1 MiB")
             data = json.loads(self.rfile.read(length))
             path = self._safe_file(data["name"])
             path.write_text(data["content"], encoding="utf-8")
@@ -566,7 +625,7 @@ class ProjectHandler(BaseHTTPRequestHandler):
         return
 
 
-class DocsHandler(BaseHTTPRequestHandler):
+class DocsHandler(SecureHandler):
     """Endpoints do portal de documentação Markdown."""
 
     docs_root: Path
@@ -662,4 +721,19 @@ def serve_docs(root: Path, host: str = "127.0.0.1", port: int = 8766, open_brows
     except KeyboardInterrupt:
         print("\nDocumentação encerrada.")
     finally:
+        server.server_close()
+
+
+    def serve_home(host: str = "127.0.0.1", port: int = 8000, open_browser: bool = True) -> None:
+      """Inicia a recepção pública local em uma porta sem escrita de arquivos."""
+      server = ThreadingHTTPServer((host, port), HomeHandler)
+      url = f"http://{host}:{server.server_port}/"
+      print(f"Automatizando LaTeX disponível em {url}")
+      if open_browser:
+        threading.Timer(0.4, _open_browser, args=(url,)).start()
+      try:
+        server.serve_forever()
+      except KeyboardInterrupt:
+        print("\nRecepção encerrada.")
+      finally:
         server.server_close()

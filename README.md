@@ -15,7 +15,8 @@ python -m automatizando_latex.cli init meu-artigo --title "Meu artigo" --author 
 python3 __init__.py
 ```
 
-Abra `http://127.0.0.1:8766` no navegador. O portal visualiza a documentação
+Abra `http://127.0.0.1:8000` no navegador. A recepção apresenta a ideia do
+projeto e links para as superfícies principais. O portal visualiza a documentação
 do projeto e a seção `GitHub Documents` carrega arquivos Markdown do repositório
 GitHub configurado no `origin`. Para editar um artigo, use o editor separado:
 
@@ -25,6 +26,9 @@ Nesse caso, abra o endereço no navegador do Windows.
 ```bash
 python -m automatizando_latex.cli serve projetos/meu-artigo
 ```
+
+Para abrir a documentação diretamente, use `python -m automatizando_latex.cli docs .`
+em `http://127.0.0.1:8766`.
 
 O projeto mantém os fontes em arquivos de texto para que cada mudança possa ser
 revisada e versionada com Git. Consulte [CONTRIBUTING.md](CONTRIBUTING.md) para
@@ -70,13 +74,13 @@ Para navegar pela documentação Markdown do projeto em uma interface visual:
 python -m automatizando_latex.cli docs .
 ```
 
-O mesmo portal é iniciado diretamente pela raiz com:
+O portal de documentação pode ser iniciado diretamente com:
 
 ```bash
-python3 __init__.py
+python -m automatizando_latex.cli docs .
 ```
 
-O portal abre em `http://127.0.0.1:8766` e encontra automaticamente arquivos
+Ele abre em `http://127.0.0.1:8766` e encontra automaticamente arquivos
 `.md` na raiz informada, incluindo `README.md`, `CONTRIBUTING.md` e a pasta
 `docs/`. Ele oferece navegação lateral, busca por nome, renderização de títulos,
 listas, tabelas, links, citações e blocos de código, além de layout responsivo.
@@ -126,6 +130,18 @@ python3 __init__.py
 
 O token nunca é exibido na página. Não o commite nem o inclua em arquivos do
 projeto.
+
+## Segurança para repositório público
+
+- os servidores locais fazem bind em `127.0.0.1` por padrão e não ficam expostos à rede;
+- a recepção em `8000` é somente leitura;
+- o editor limita a escrita aos três arquivos permitidos e rejeita payloads maiores que 1 MiB;
+- caminhos de documentos e arquivos são validados contra traversal (`../`);
+- respostas incluem `nosniff`, `SAMEORIGIN`, `no-referrer` e Content Security Policy;
+- tokens do GitHub devem vir de variável de ambiente, nunca de código ou Markdown;
+- antes de usar `--host 0.0.0.0`, adicione autenticação, HTTPS e controle de rede.
+
+Veja também o [guia de contribuição](CONTRIBUTING.md) antes de publicar mudanças.
 
 O comando `build` executa a sequência completa:
 

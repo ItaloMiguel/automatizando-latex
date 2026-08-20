@@ -2,8 +2,8 @@
 
 from pathlib import Path
 
-from automatizando_latex.web import serve_docs
+from automatizando_latex.web import serve_home
 
 
 if __name__ == "__main__":
-    serve_docs(Path(__file__).parent)
+    serve_home()

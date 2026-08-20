@@ -30,6 +30,9 @@ from automatizando_latex.web import (
     discover_markdown,
     markdown_to_html,
     _open_browser,
+    HOME_HTML,
+    HomeHandler,
+    MAX_BODY_BYTES,
     discover_github_markdown,
     fetch_github_markdown,
 )
@@ -318,3 +321,21 @@ class CreateArticleTests(unittest.TestCase):
     def test_github_only_server_skips_local_documents(self):
         handler = type("GithubOnlyHandler", (DocsHandler,), {"docs_root": Path.cwd(), "github_only": True})
         self.assertTrue(handler.github_only)
+
+    def test_home_page_presents_project_and_security_headers(self):
+        self.assertIn("Do primeiro rascunho à publicação.", HOME_HTML)
+        server = ThreadingHTTPServer(("127.0.0.1", 0), HomeHandler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            with urlopen(f"http://127.0.0.1:{server.server_port}/") as response:
+                self.assertEqual(response.status, 200)
+                self.assertEqual(response.headers["X-Content-Type-Options"], "nosniff")
+                self.assertIn("Content-Security-Policy", response.headers)
+                self.assertIn("Automatizando LaTeX", response.read().decode("utf-8"))
+        finally:
+            server.shutdown()
+            server.server_close()
+
+    def test_editor_body_limit_is_one_megabyte(self):
+        self.assertEqual(MAX_BODY_BYTES, 1_048_576)

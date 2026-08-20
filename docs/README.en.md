@@ -18,6 +18,9 @@ Open `http://127.0.0.1:8766`. The portal displays local Markdown files and a
 welcome screen with Portuguese/English translation and a live HTML reading
 preview for LaTeX files in the article editor.
 
+Running `python3 __init__.py` opens the read-only project reception at
+`http://127.0.0.1:8000`; documentation remains available on port `8766`.
+
 ## Create and edit a publication
 
 ```bash
