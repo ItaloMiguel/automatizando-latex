@@ -1,0 +1,47 @@
+name: Deploy Estático do Ateliê
+
+on:
+  push:
+    branches: ["main"]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps:deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-python: '3.11'
+
+      - name: Extrair HTML da aplicação
+        run: |
+          # Script rápido para printar a página inicial em um arquivo index.html
+          python3 -c "from seu_arquivo import HOME_HTML; print(HOME_HTML)" > index.html
+          
+          # Se os links internos apontarem para o localhost, ajustamos para a visualização
+          sed -i 's/http:\/\/127.0.0.1:8766\//#/g' index.html
+          sed -i 's/http:\/\/127.0.0.1:8765\//#/g' index.html
+
+      - name: Upload do artefato para o Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: Deploy para o GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
