@@ -23,6 +23,7 @@ Ideias que podem melhorar a experiência sem aumentar muito a complexidade.
 - adicionar colaboração simultânea com controle de conflitos;
 - integrar revisão textual e validações específicas das normas ABNT;
 - publicar uma imagem Docker com TeX Live e dependências fixadas.
+- adicionar compatibilidade com google drive (opcional).
 
 ## Critérios para priorizar
 
