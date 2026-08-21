@@ -51,6 +51,33 @@ revisada e versionada com Git. Consulte [CONTRIBUTING.md](CONTRIBUTING.md) para
 commits e Pull Requests, [docs/HISTORICO.md](docs/HISTORICO.md) para o histórico
 recente e [docs/ROADMAP.md](docs/ROADMAP.md) para ideias futuras.
 
+### Windows e WSL
+
+Não compartilhe o mesmo `.venv` entre Windows e WSL. Os executáveis são
+diferentes: Windows usa `.venv-win/Scripts/python.exe`, enquanto WSL usa
+`.venv/bin/python`.
+
+No WSL:
+
+```bash
+rm -rf .venv
+python3 -m venv .venv
+.venv/bin/python -m pip install -e .
+.venv/bin/python __init__.py
+```
+
+No Windows PowerShell:
+
+```powershell
+Remove-Item -Recurse -Force .venv-win -ErrorAction SilentlyContinue
+C:\Python314\python.exe -m venv .venv-win
+.\.venv-win\Scripts\python.exe -m pip install -e .
+```
+
+No VS Code Windows, selecione `.venv-win\Scripts\python.exe`. Para usar o
+`.venv` Linux, abra o projeto em uma janela Remote-WSL e selecione
+`.venv/bin/python`.
+
 ## Organização do código web
 
 O código HTTP é dividido por responsabilidade: `web_security.py` concentra
@@ -174,6 +201,71 @@ projeto.
 - antes de usar `--host 0.0.0.0`, adicione autenticação, HTTPS e controle de rede.
 
 Veja também o [guia de contribuição](CONTRIBUTING.md) antes de publicar mudanças.
+
+## Rodar com Docker e Nginx
+
+Para evitar configurar Python e WSL manualmente, use Docker Compose. A
+arquitetura tem dois containers:
+
+```text
+Nginx :8000
+	└── app Python :8000  recepção
+	└── app Python :8766 documentação
+	└── app Python :8765 editor
+```
+
+O Nginx é o único serviço publicado para o host. O container Python fica em
+uma rede interna e os artigos são persistidos em volumes locais. Não há banco
+de dados: os arquivos `.tex`, `.bib` e Markdown são o armazenamento da
+aplicação. Para uma equipe, faça backup do diretório de projetos e considere
+S3 ou outro armazenamento versionado no futuro.
+
+Requisitos: Docker Desktop no Windows/macOS ou Docker Engine + Compose no
+Linux. Na raiz do repositório:
+
+```bash
+make run
+```
+
+Abra:
+
+- `http://localhost:8000/` para a recepção;
+- `http://localhost:8000/docs/` para a documentação;
+- `http://localhost:8000/editor/` para o editor.
+
+Comandos úteis:
+
+```bash
+make logs
+make stop
+make test
+make clean
+```
+
+O `Dockerfile`, o `docker-compose.yml`, o Nginx e o script de inicialização
+ficam em `docker/`. A imagem cria um usuário sem privilégios e não inclui
+projetos locais no build; os dados entram pelos volumes definidos no Compose.
+
+### Publicar uma imagem
+
+Para gerar e publicar uma imagem em um registry, como Docker Hub ou GHCR:
+
+```bash
+docker build -t SEU_USUARIO/automatizando-latex:0.1.0 .
+docker push SEU_USUARIO/automatizando-latex:0.1.0
+```
+
+Em produção, fixe uma tag de versão em vez de usar `latest`, proteja o registry
+com autenticação e mantenha o Compose/Nginx no servidor. Nunca coloque tokens
+GitHub na imagem. O `GITHUB_TOKEN` deve ser injetado como segredo em runtime.
+
+### Limites atuais para produção
+
+O editor ainda não possui autenticação de usuários nem isolamento por conta.
+Por isso, o Compose é adequado para desenvolvimento, rede privada ou uma
+instância protegida por VPN. Para abrir na internet, adicione HTTPS, login,
+limites de compilação, controle de tamanho de projeto, backup e monitoramento
+antes de expor a rota `/editor/`.
 
 O comando `build` executa a sequência completa:
 

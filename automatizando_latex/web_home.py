@@ -32,7 +32,7 @@ HOME_HTML = r"""<!doctype html>
 <body><header><strong>Automatizando LaTeX</strong><span>ABNT · LATEX · GIT</span></header>
 <main><p class="kicker">Escrita acadêmica aberta</p><h1>Do primeiro rascunho à publicação.</h1>
 <p class="intro">Uma pequena oficina para criar artigos ABNT, editar LaTeX, acompanhar versões e manter a documentação do projeto em um só lugar.</p>
-<div class="actions"><a class="primary" href="http://127.0.0.1:8766/">Ler documentação</a><a href="http://127.0.0.1:8765/">Abrir editor</a></div>
+<div class="actions"><a class="primary" href="/docs/">Ler documentação</a><a href="/editor/">Abrir editor</a></div>
 <p class="note">A recepção roda localmente por padrão. Os serviços de documentação e edição são iniciados separadamente para manter cada superfície simples e segura.</p></main></body></html>"""
 
 

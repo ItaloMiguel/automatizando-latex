@@ -1,0 +1,32 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      PROJECT_DIR: /workspace/rascunhos/artigo-abnt
+      HOST: 0.0.0.0
+    volumes:
+      - ./rascunhos:/workspace/rascunhos
+      - ./projetos:/workspace/projetos
+    expose:
+      - "8000"
+      - "8765"
+      - "8766"
+    networks:
+      - internal
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "8000:80"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - internal
+
+networks:
+  internal:
+    driver: bridge
