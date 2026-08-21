@@ -52,15 +52,7 @@ HOME_HTML = r"""<!doctype html>
 <p class="note">A recepção roda localmente por padrão. Os serviços de documentação e edição são iniciados separadamente para manter cada superfície simples e segura.</p></main></body></html>"""
 
 
-class SecureHandler(BaseHTTPRequestHandler):
-    """Adiciona headers mínimos de segurança aos servidores locais."""
-
-    def end_headers(self) -> None:
-        self.send_header("X-Content-Type-Options", "nosniff")
-        self.send_header("X-Frame-Options", "SAMEORIGIN")
-        self.send_header("Referrer-Policy", "no-referrer")
-        self.send_header("Content-Security-Policy", "default-src 'self'; frame-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'")
-        super().end_headers()
+from .web.security import SecureHandler 
 
 
 class HomeHandler(SecureHandler):
